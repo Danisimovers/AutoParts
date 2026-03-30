@@ -1,16 +1,23 @@
 package com.autoparts.autoparts_system.controller;
 
+import com.autoparts.autoparts_system.dto.request.CreateOrderRequest;
+import com.autoparts.autoparts_system.dto.response.ApiResponse;
+import com.autoparts.autoparts_system.dto.response.OrderDTO;
+import com.autoparts.autoparts_system.dto.response.OrderItemDTO;
 import com.autoparts.autoparts_system.model.OrderItem;
+import com.autoparts.autoparts_system.model.Product;
 import com.autoparts.autoparts_system.model.SalesOrder;
 import com.autoparts.autoparts_system.service.OrderService;
+import com.autoparts.autoparts_system.service.ProductService;
+import com.autoparts.autoparts_system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -20,45 +27,106 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
-    // Создать заказ (userId пока заглушка, потом из сессии)
+    @Autowired
+    private ProductService productService;
+
+    @Autowired
+    private UserService userService;
+
     @PostMapping
-    public ResponseEntity<?> createOrder(@RequestParam Long userId) {
+    public ResponseEntity<ApiResponse> createOrder(@RequestBody CreateOrderRequest request) {
         try {
-            SalesOrder order = orderService.createOrder(userId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(order);
+            SalesOrder order = orderService.createOrder(request.getUserId());
+            OrderDTO dto = convertToDTO(order);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Заказ успешно создан", dto));
         } catch (IllegalArgumentException e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
         }
     }
 
-    // Получить заказы пользователя
     @GetMapping("/user/{userId}")
-    public List<SalesOrder> getUserOrders(@PathVariable Long userId) {
-        return orderService.getUserOrders(userId);
+    public ResponseEntity<ApiResponse> getUserOrders(@PathVariable Long userId) {
+        List<SalesOrder> orders = orderService.getUserOrders(userId);
+        List<OrderDTO> dtos = orders.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success("Заказы успешно загружены", dtos));
     }
 
-    // Получить заказ по ID
     @GetMapping("/{orderId}")
-    public ResponseEntity<SalesOrder> getOrderById(@PathVariable Long orderId) {
+    public ResponseEntity<ApiResponse> getOrderById(@PathVariable Long orderId) {
         SalesOrder order = orderService.getOrderById(orderId);
-        if (order != null) {
-            return ResponseEntity.ok(order);
+        if (order == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Заказ не найден"));
         }
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(ApiResponse.success("Заказ успешно загружен", convertToDTO(order)));
     }
 
-    // Получить позиции заказа
     @GetMapping("/{orderId}/items")
-    public List<OrderItem> getOrderItems(@PathVariable Long orderId) {
-        return orderService.getOrderItems(orderId);
+    public ResponseEntity<ApiResponse> getOrderItems(@PathVariable Long orderId) {
+        List<OrderItem> items = orderService.getOrderItems(orderId);
+        List<OrderItemDTO> dtos = items.stream()
+                .map(this::convertToItemDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success("Позиции заказа успешно загружены", dtos));
     }
 
-    // Обновить статус заказа
     @PutMapping("/{orderId}/status")
-    public ResponseEntity<Void> updateOrderStatus(@PathVariable Long orderId, @RequestParam String status) {
-        orderService.updateOrderStatus(orderId, status);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<ApiResponse> updateOrderStatus(@PathVariable Long orderId, @RequestParam String status) {
+        try {
+            orderService.updateOrderStatus(orderId, status);
+            return ResponseEntity.ok(ApiResponse.success("Статус заказа обновлен", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    private OrderDTO convertToDTO(SalesOrder order) {
+        OrderDTO dto = new OrderDTO();
+        dto.setId(order.getId());
+        dto.setUserId(order.getUserId());
+        dto.setTotal(order.getTotal());
+        dto.setStatus(order.getStatus());
+        dto.setCreatedAt(order.getCreatedAt());
+
+        try {
+            dto.setUserLogin(userService.getUserById(order.getUserId()).getLogin());
+        } catch (Exception e) {
+            dto.setUserLogin("Неизвестно");
+        }
+
+        List<OrderItem> items = orderService.getOrderItems(order.getId());
+        List<OrderItemDTO> itemDTOs = items.stream()
+                .map(this::convertToItemDTO)
+                .collect(Collectors.toList());
+        dto.setItems(itemDTOs);
+
+        return dto;
+    }
+
+    private OrderItemDTO convertToItemDTO(OrderItem item) {
+        OrderItemDTO dto = new OrderItemDTO();
+        dto.setId(item.getId());
+        dto.setProductId(item.getProductId());
+        dto.setQuantity(item.getQuantity());
+        dto.setPrice(item.getPrice());
+        dto.setTotal(item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+
+        try {
+            Product product = productService.getProductById(item.getProductId());
+            if (product != null) {
+                dto.setProductName(product.getName());
+                dto.setProductSku(product.getSku());
+            }
+        } catch (Exception e) {
+            dto.setProductName("Неизвестно");
+            dto.setProductSku("Неизвестно");
+        }
+
+        return dto;
     }
 }
