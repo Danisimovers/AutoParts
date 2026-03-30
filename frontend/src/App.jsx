@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Catalog from './pages/Catalog';
 import Cart from './pages/Cart';
+import ProductDetail from './pages/ProductDetail';
 import OrderSuccess from './pages/OrderSuccess';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Catalog />} />
             <Route path="/cart" element={<Cart />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/order-success" element={<OrderSuccess />} />
           </Routes>
         </div>

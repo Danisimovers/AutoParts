@@ -15,7 +15,7 @@ function OrderSuccess() {
                 borderRadius: '8px',
                 marginBottom: '20px'
             }}>
-                <h1>✅ Заказ успешно оформлен!</h1>
+                <h1>Заказ успешно оформлен!</h1>
                 <p>Номер заказа: {order?.id}</p>
                 <p>Сумма заказа: {order?.total} ₽</p>
                 <p>Статус: {order?.status}</p>

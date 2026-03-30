@@ -1,16 +1,27 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function ProductCard({ product, onAddToCart }) {
+    const navigate = useNavigate();
+
+    const handleCardClick = () => {
+        navigate(`/product/${product.id}`);
+    };
+
     return (
-        <div style={{
-            border: '1px solid #ddd',
-            borderRadius: '8px',
-            padding: '16px',
-            margin: '8px',
-            width: '250px',
-            display: 'inline-block',
-            verticalAlign: 'top'
-        }}>
+        <div
+            onClick={handleCardClick}
+            style={{
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                padding: '16px',
+                margin: '8px',
+                width: '250px',
+                display: 'inline-block',
+                verticalAlign: 'top',
+                cursor: 'pointer'
+            }}
+        >
             <h3 style={{ fontSize: '18px', margin: '0 0 8px 0' }}>{product.name}</h3>
             <p style={{ color: '#666', fontSize: '14px' }}>Артикул: {product.sku}</p>
             <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#e67e22' }}>
@@ -20,7 +31,10 @@ function ProductCard({ product, onAddToCart }) {
                 {product.stock > 0 ? `В наличии: ${product.stock} шт` : 'Нет в наличии'}
             </p>
             <button
-                onClick={() => onAddToCart(product)}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToCart(product);
+                }}
                 disabled={product.stock === 0}
                 style={{
                     backgroundColor: '#e67e22',
@@ -29,7 +43,8 @@ function ProductCard({ product, onAddToCart }) {
                     padding: '8px 16px',
                     borderRadius: '4px',
                     cursor: product.stock > 0 ? 'pointer' : 'not-allowed',
-                    width: '100%'
+                    width: '100%',
+                    marginTop: '10px'
                 }}
             >
                 {product.stock > 0 ? 'В корзину' : 'Нет в наличии'}
