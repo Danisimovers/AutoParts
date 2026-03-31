@@ -10,6 +10,8 @@ import com.autoparts.autoparts_system.service.CartService;
 import com.autoparts.autoparts_system.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -28,17 +30,26 @@ public class CartController {
     @Autowired
     private ProductService productService;
 
+    private Long getCurrentUserId() {
+        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        // Здесь нужно извлечь userId из UserDetails
+        // Временно возвращаем заглушку, потом исправим
+        return 1L; // ВРЕМЕННО, ПОТОМ ИСПРАВИТЬ
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse> getCart() {
-        CartResponseDTO response = buildCartResponse();
+        Long userId = getCurrentUserId();
+        CartResponseDTO response = buildCartResponse(userId);
         return ResponseEntity.ok(ApiResponse.success("Корзина загружена", response));
     }
 
     @PostMapping("/add")
     public ResponseEntity<ApiResponse> addToCart(@RequestBody AddToCartRequest request) {
         try {
-            cartService.addToCart(request.getProductId(), request.getQuantity());
-            CartResponseDTO response = buildCartResponse();
+            Long userId = getCurrentUserId();
+            cartService.addToCart(userId, request.getProductId(), request.getQuantity());
+            CartResponseDTO response = buildCartResponse(userId);
             return ResponseEntity.ok(ApiResponse.success("Товар добавлен в корзину", response));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -48,8 +59,9 @@ public class CartController {
     @PutMapping("/update")
     public ResponseEntity<ApiResponse> updateQuantity(@RequestBody UpdateCartRequest request) {
         try {
-            cartService.updateQuantity(request.getProductId(), request.getQuantity());
-            CartResponseDTO response = buildCartResponse();
+            Long userId = getCurrentUserId();
+            cartService.updateQuantity(userId, request.getProductId(), request.getQuantity());
+            CartResponseDTO response = buildCartResponse(userId);
             return ResponseEntity.ok(ApiResponse.success("Корзина обновлена", response));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -58,20 +70,22 @@ public class CartController {
 
     @DeleteMapping("/remove/{productId}")
     public ResponseEntity<ApiResponse> removeFromCart(@PathVariable Long productId) {
-        cartService.removeFromCart(productId);
-        CartResponseDTO response = buildCartResponse();
+        Long userId = getCurrentUserId();
+        cartService.removeFromCart(userId, productId);
+        CartResponseDTO response = buildCartResponse(userId);
         return ResponseEntity.ok(ApiResponse.success("Товар удален из корзины", response));
     }
 
     @DeleteMapping("/clear")
     public ResponseEntity<ApiResponse> clearCart() {
-        cartService.clearCart();
-        CartResponseDTO response = buildCartResponse();
+        Long userId = getCurrentUserId();
+        cartService.clearCart(userId);
+        CartResponseDTO response = buildCartResponse(userId);
         return ResponseEntity.ok(ApiResponse.success("Корзина очищена", response));
     }
 
-    private CartResponseDTO buildCartResponse() {
-        Map<Long, Integer> cart = cartService.getCart();
+    private CartResponseDTO buildCartResponse(Long userId) {
+        Map<Long, Integer> cart = cartService.getCart(userId);
         List<CartItemDTO> items = new ArrayList<>();
         BigDecimal totalPrice = BigDecimal.ZERO;
         int totalItems = 0;

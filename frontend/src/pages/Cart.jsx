@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
 
 function Cart() {
     const [cart, setCart] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [userId] = useState(2); // Временный ID, потом из сессии
+    const { user } = useAuth();
+    const userId = user?.id;
     const navigate = useNavigate();
 
     useEffect(() => {

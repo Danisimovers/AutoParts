@@ -1,31 +1,87 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Catalog from './pages/Catalog';
 import Cart from './pages/Cart';
 import ProductDetail from './pages/ProductDetail';
 import OrderSuccess from './pages/OrderSuccess';
+import Login from './pages/Login';
+import Register from './pages/Register';
+
+function NavBar() {
+  const { user, logout, isAuthenticated } = useAuth();
+
+  return (
+      <nav style={{
+        backgroundColor: '#333',
+        padding: '15px',
+        display: 'flex',
+        gap: '20px',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div style={{ display: 'flex', gap: '20px' }}>
+          <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>Каталог</Link>
+          <Link to="/cart" style={{ color: 'white', textDecoration: 'none' }}>Корзина</Link>
+          {isAuthenticated && (
+              <Link to="/my-orders" style={{ color: 'white', textDecoration: 'none' }}>Мои заказы</Link>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          {isAuthenticated ? (
+              <>
+                <span style={{ color: 'white' }}>Привет, {user?.login}</span>
+                <button
+                    onClick={logout}
+                    style={{
+                      backgroundColor: '#ff4444',
+                      color: 'white',
+                      border: 'none',
+                      padding: '5px 15px',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                >
+                  Выйти
+                </button>
+              </>
+          ) : (
+              <>
+                <Link to="/login" style={{ color: 'white', textDecoration: 'none' }}>Вход</Link>
+                <Link to="/register" style={{ color: 'white', textDecoration: 'none' }}>Регистрация</Link>
+              </>
+          )}
+        </div>
+      </nav>
+  );
+}
+
+function AppRoutes() {
+  const { isAuthenticated } = useAuth();
+
+  return (
+      <Routes>
+        <Route path="/" element={<Catalog />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/order-success" element={<OrderSuccess />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/my-orders" element={
+          isAuthenticated ? <div>Мои заказы (скоро)</div> : <Navigate to="/login" />
+        } />
+      </Routes>
+  );
+}
 
 function App() {
   return (
       <BrowserRouter>
-        <div>
-          <nav style={{
-            backgroundColor: '#333',
-            padding: '15px',
-            display: 'flex',
-            gap: '20px'
-          }}>
-            <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>Каталог</Link>
-            <Link to="/cart" style={{ color: 'white', textDecoration: 'none' }}>Корзина</Link>
-          </nav>
-
-          <Routes>
-            <Route path="/" element={<Catalog />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/order-success" element={<OrderSuccess />} />
-          </Routes>
-        </div>
+        <AuthProvider>
+          <NavBar />
+          <AppRoutes />
+        </AuthProvider>
       </BrowserRouter>
   );
 }

@@ -2,50 +2,68 @@ package com.autoparts.autoparts_system.service;
 
 import com.autoparts.autoparts_system.model.Product;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.annotation.SessionScope;
-
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-@SessionScope
 public class CartService {
 
-    // cart: key = productId, value = quantity
-    private Map<Long, Integer> cart = new HashMap<>();
+    // Хранилище корзин: ключ - userId, значение - Map<productId, quantity>
+    private final Map<Long, Map<Long, Integer>> userCarts = new ConcurrentHashMap<>();
 
-    public void addToCart(Long productId, int quantity) {
+    public void addToCart(Long userId, Long productId, int quantity) {
         if (quantity <= 0) {
             throw new IllegalArgumentException("Количество должно быть больше 0");
         }
+        Map<Long, Integer> cart = userCarts.computeIfAbsent(userId, k -> new HashMap<>());
         cart.put(productId, cart.getOrDefault(productId, 0) + quantity);
     }
 
-    public void updateQuantity(Long productId, int quantity) {
+    public void updateQuantity(Long userId, Long productId, int quantity) {
+        Map<Long, Integer> cart = userCarts.get(userId);
+        if (cart == null) return;
+
         if (quantity <= 0) {
             cart.remove(productId);
         } else {
             cart.put(productId, quantity);
         }
+
+        if (cart.isEmpty()) {
+            userCarts.remove(userId);
+        }
     }
 
-    public void removeFromCart(Long productId) {
-        cart.remove(productId);
+    public void removeFromCart(Long userId, Long productId) {
+        Map<Long, Integer> cart = userCarts.get(userId);
+        if (cart != null) {
+            cart.remove(productId);
+            if (cart.isEmpty()) {
+                userCarts.remove(userId);
+            }
+        }
     }
 
-    public Map<Long, Integer> getCart() {
-        return new HashMap<>(cart);
+    public Map<Long, Integer> getCart(Long userId) {
+        Map<Long, Integer> cart = userCarts.get(userId);
+        return cart != null ? new HashMap<>(cart) : new HashMap<>();
     }
 
-    public void clearCart() {
-        cart.clear();
+    public void clearCart(Long userId) {
+        userCarts.remove(userId);
     }
 
-    public int getTotalItems() {
+    public int getTotalItems(Long userId) {
+        Map<Long, Integer> cart = userCarts.get(userId);
+        if (cart == null) return 0;
         return cart.values().stream().mapToInt(Integer::intValue).sum();
     }
 
-    public double getTotalPrice(ProductService productService) {
+    public double getTotalPrice(Long userId, ProductService productService) {
+        Map<Long, Integer> cart = userCarts.get(userId);
+        if (cart == null) return 0;
+
         return cart.entrySet().stream()
                 .mapToDouble(entry -> {
                     Product product = productService.getProductById(entry.getKey());

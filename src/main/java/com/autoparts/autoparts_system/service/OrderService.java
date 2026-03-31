@@ -34,7 +34,7 @@ public class OrderService {
 
     @Transactional
     public SalesOrder createOrder(Long userId) {
-        Map<Long, Integer> cart = cartService.getCart();
+        Map<Long, Integer> cart = cartService.getCart(userId);  // <-- ДОБАВЛЕН userId
 
         if (cart.isEmpty()) {
             throw new IllegalArgumentException("Корзина пуста");
@@ -58,7 +58,7 @@ public class OrderService {
         order.setCreatedAt(LocalDateTime.now());
 
         // Вычисляем общую сумму
-        double total = cartService.getTotalPrice(productService);
+        double total = cartService.getTotalPrice(userId, productService);  // <-- ДОБАВЛЕН userId
         order.setTotal(BigDecimal.valueOf(total));
 
         salesOrderRepository.save(order);
@@ -81,7 +81,7 @@ public class OrderService {
         }
 
         // Очищаем корзину
-        cartService.clearCart();
+        cartService.clearCart(userId);  // <-- ДОБАВЛЕН userId
 
         return order;
     }

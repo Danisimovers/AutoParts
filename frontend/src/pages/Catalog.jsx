@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import ProductCard from '../components/ProductCard';
+import { useAuth } from '../context/AuthContext';
 
 function Catalog() {
+    const { isAuthenticated } = useAuth();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
