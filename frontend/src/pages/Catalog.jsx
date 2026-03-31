@@ -1,27 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import ProductCard from '../components/ProductCard';
-import { useAuth } from '../context/AuthContext';
 
 function Catalog() {
-    const { isAuthenticated } = useAuth();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [vehicles, setVehicles] = useState([]);
     const [selectedVehicle, setSelectedVehicle] = useState('');
 
+    // Пагинация
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalItems, setTotalItems] = useState(0);
+    const pageSize = 12;
+
     useEffect(() => {
         loadProducts();
         loadVehicles();
-    }, []);
+    }, [currentPage]);
 
     const loadProducts = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/products');
+            const response = await api.get(`/products/page?page=${currentPage}&size=${pageSize}`);
             if (response.data.success) {
-                setProducts(response.data.data);
+                const data = response.data.data;
+                setProducts(data.products);
+                setTotalPages(data.totalPages);
+                setTotalItems(data.totalItems);
             }
         } catch (error) {
             console.error('Ошибка загрузки товаров:', error);
@@ -53,6 +60,8 @@ function Catalog() {
             const response = await api.get(url);
             if (response.data.success) {
                 setProducts(response.data.data.products || []);
+                setTotalPages(1);
+                setTotalItems(products.length);
             }
         } catch (error) {
             console.error('Ошибка поиска:', error);
@@ -73,6 +82,12 @@ function Catalog() {
         } catch (error) {
             console.error('Ошибка добавления в корзину:', error);
             alert('Ошибка добавления в корзину');
+        }
+    };
+
+    const goToPage = (page) => {
+        if (page >= 0 && page < totalPages) {
+            setCurrentPage(page);
         }
     };
 
@@ -137,15 +152,64 @@ function Catalog() {
             ) : products.length === 0 ? (
                 <p>Товары не найдены</p>
             ) : (
-                <div>
-                    {products.map(product => (
-                        <ProductCard
-                            key={product.id}
-                            product={product}
-                            onAddToCart={addToCart}
-                        />
-                    ))}
-                </div>
+                <>
+                    <div>
+                        {products.map(product => (
+                            <ProductCard
+                                key={product.id}
+                                product={product}
+                                onAddToCart={addToCart}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Пагинация */}
+                    {totalPages > 1 && (
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: '10px',
+                            marginTop: '30px',
+                            padding: '20px'
+                        }}>
+                            <button
+                                onClick={() => goToPage(currentPage - 1)}
+                                disabled={currentPage === 0}
+                                style={{
+                                    padding: '8px 16px',
+                                    backgroundColor: '#e67e22',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: currentPage === 0 ? 'not-allowed' : 'pointer',
+                                    opacity: currentPage === 0 ? 0.5 : 1
+                                }}
+                            >
+                                ← Назад
+                            </button>
+
+                            <span style={{ padding: '8px 16px' }}>
+                                Страница {currentPage + 1} из {totalPages}
+                            </span>
+
+                            <button
+                                onClick={() => goToPage(currentPage + 1)}
+                                disabled={currentPage >= totalPages - 1}
+                                style={{
+                                    padding: '8px 16px',
+                                    backgroundColor: '#e67e22',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: currentPage >= totalPages - 1 ? 'not-allowed' : 'pointer',
+                                    opacity: currentPage >= totalPages - 1 ? 0.5 : 1
+                                }}
+                            >
+                                Вперед →
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

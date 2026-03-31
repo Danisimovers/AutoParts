@@ -11,7 +11,6 @@ import com.autoparts.autoparts_system.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -31,15 +30,34 @@ public class CartController {
     private ProductService productService;
 
     private Long getCurrentUserId() {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        // Здесь нужно извлечь userId из UserDetails
-        // Временно возвращаем заглушку, потом исправим
-        return 1L; // ВРЕМЕННО, ПОТОМ ИСПРАВИТЬ
+        // Получаем userId из details, который мы установили в JwtAuthFilter
+        Object details = SecurityContextHolder.getContext().getAuthentication().getDetails();
+        if (details instanceof Map) {
+            Object userId = ((Map<?, ?>) details).get("userId");
+            if (userId instanceof Long) {
+                return (Long) userId;
+            }
+            if (userId instanceof Integer) {
+                return ((Integer) userId).longValue();
+            }
+        }
+
+        // Если не нашли, пробуем через Principal (логин)
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+            String username = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+            System.out.println("Username from principal: " + username);
+            // TODO: найти пользователя по логину и вернуть его ID
+            // Пока бросаем исключение
+        }
+
+        throw new RuntimeException("Не удалось определить ID пользователя. Проверьте JwtAuthFilter.");
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse> getCart() {
         Long userId = getCurrentUserId();
+        System.out.println("Get cart for userId: " + userId);
         CartResponseDTO response = buildCartResponse(userId);
         return ResponseEntity.ok(ApiResponse.success("Корзина загружена", response));
     }
@@ -48,6 +66,7 @@ public class CartController {
     public ResponseEntity<ApiResponse> addToCart(@RequestBody AddToCartRequest request) {
         try {
             Long userId = getCurrentUserId();
+            System.out.println("Add to cart: userId=" + userId + ", productId=" + request.getProductId() + ", quantity=" + request.getQuantity());
             cartService.addToCart(userId, request.getProductId(), request.getQuantity());
             CartResponseDTO response = buildCartResponse(userId);
             return ResponseEntity.ok(ApiResponse.success("Товар добавлен в корзину", response));

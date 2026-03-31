@@ -10,9 +10,13 @@ import com.autoparts.autoparts_system.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -37,6 +41,9 @@ public class ProductController {
 
     @Autowired
     private VehicleService vehicleService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @GetMapping
     public ResponseEntity<ApiResponse> getAllProducts() {
@@ -193,5 +200,26 @@ public class ProductController {
         dto.setCompatibleVehicles(vehicles);
 
         return dto;
+    }
+
+    @GetMapping("/page")
+    public ResponseEntity<ApiResponse> getProductsPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+
+        int offset = page * size;
+        String sql = "SELECT * FROM products LIMIT ? OFFSET ?";
+        List<Product> products = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Product.class), size, offset);
+
+        String countSql = "SELECT COUNT(*) FROM products";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("products", products.stream().map(this::convertToDTO).collect(Collectors.toList()));
+        response.put("currentPage", page);
+        response.put("totalItems", total);
+        response.put("totalPages", (int) Math.ceil((double) total / size));
+
+        return ResponseEntity.ok(ApiResponse.success("Товары загружены", response));
     }
 }

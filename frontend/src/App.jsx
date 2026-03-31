@@ -7,6 +7,8 @@ import ProductDetail from './pages/ProductDetail';
 import OrderSuccess from './pages/OrderSuccess';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import MyOrders from './pages/MyOrders';
+import OrderDetail from './pages/OrderDetail';
 
 function NavBar() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -60,19 +62,18 @@ function NavBar() {
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
 
-  return (
-      <Routes>
-        <Route path="/" element={<Catalog />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
-        <Route path="/order-success" element={<OrderSuccess />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/my-orders" element={
-          isAuthenticated ? <div>Мои заказы (скоро)</div> : <Navigate to="/login" />
-        } />
-      </Routes>
-  );
+    return (
+        <Routes>
+            <Route path="/" element={<Catalog />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/order-success" element={<OrderSuccess />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/my-orders" element={isAuthenticated ? <MyOrders /> : <Navigate to="/login" />} />
+            <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
+        </Routes>
+    );
 }
 
 function App() {

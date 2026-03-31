@@ -34,7 +34,11 @@ public class OrderService {
 
     @Transactional
     public SalesOrder createOrder(Long userId) {
-        Map<Long, Integer> cart = cartService.getCart(userId);  // <-- ДОБАВЛЕН userId
+        System.out.println("=== CREATE ORDER ===");
+        System.out.println("UserId: " + userId);
+
+        Map<Long, Integer> cart = cartService.getCart(userId);
+        System.out.println("Cart size: " + cart.size());
 
         if (cart.isEmpty()) {
             throw new IllegalArgumentException("Корзина пуста");
@@ -58,10 +62,11 @@ public class OrderService {
         order.setCreatedAt(LocalDateTime.now());
 
         // Вычисляем общую сумму
-        double total = cartService.getTotalPrice(userId, productService);  // <-- ДОБАВЛЕН userId
+        double total = cartService.getTotalPrice(userId, productService);
         order.setTotal(BigDecimal.valueOf(total));
 
         salesOrderRepository.save(order);
+        System.out.println("Order created with id: " + order.getId());
 
         // Сохраняем позиции заказа и списываем товары
         for (Map.Entry<Long, Integer> entry : cart.entrySet()) {
@@ -75,13 +80,17 @@ public class OrderService {
             orderItem.setQuantity(quantity);
             orderItem.setPrice(product.getPrice());
             orderItemRepository.save(orderItem);
+            System.out.println("OrderItem saved: productId=" + productId + ", quantity=" + quantity);
 
             // Списываем товар со склада
             stockService.removeStock(productId, quantity);
+            System.out.println("Stock removed for productId=" + productId + ", quantity=" + quantity);
         }
 
         // Очищаем корзину
-        cartService.clearCart(userId);  // <-- ДОБАВЛЕН userId
+        cartService.clearCart(userId);
+        System.out.println("Cart cleared for userId: " + userId);
+        System.out.println("=== ORDER CREATED SUCCESSFULLY ===");
 
         return order;
     }
