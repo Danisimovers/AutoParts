@@ -1,6 +1,5 @@
 package com.autoparts.autoparts_system.controller;
 
-import com.autoparts.autoparts_system.dto.request.LoginRequest;
 import com.autoparts.autoparts_system.dto.request.RegisterRequest;
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.dto.response.UserDTO;
@@ -39,34 +38,6 @@ public class UserController {
                     .body(ApiResponse.error("Пользователь не найден"));
         }
         return ResponseEntity.ok(ApiResponse.success("Пользователь успешно загружен", convertToDTO(user)));
-    }
-
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest request) {
-        try {
-            User user = userService.registerUser(
-                    request.getLogin(),
-                    request.getPassword(),
-                    request.getEmail(),
-                    request.getPhone()
-            );
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success("Регистрация прошла успешно", convertToDTO(user)));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<ApiResponse> login(@RequestBody LoginRequest request) {
-        try {
-            User user = userService.login(request.getLogin(), request.getPassword());
-            return ResponseEntity.ok(ApiResponse.success("Вход выполнен успешно", convertToDTO(user)));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(e.getMessage()));
-        }
     }
 
     @PutMapping("/{id}")

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../api/api';
 
 function Register() {
     const [login, setLogin] = useState('');
@@ -9,6 +10,7 @@ function Register() {
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const { register } = useAuth();
@@ -16,6 +18,7 @@ function Register() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
 
         if (password !== confirmPassword) {
             setError('Пароли не совпадают');
@@ -28,13 +31,24 @@ function Register() {
         }
 
         setLoading(true);
-        const result = await register(login, password, email, phone);
-        setLoading(false);
 
-        if (result.success) {
-            navigate('/');
-        } else {
-            setError(result.error);
+        try {
+            const response = await api.post('/auth/register', { login, password, email, phone });
+            if (response.data.success) {
+                setSuccess(response.data.message);
+                // Очищаем форму
+                setLogin('');
+                setPassword('');
+                setConfirmPassword('');
+                setEmail('');
+                setPhone('');
+            } else {
+                setError(response.data.message);
+            }
+        } catch (error) {
+            setError(error.response?.data?.message || 'Ошибка регистрации');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -45,6 +59,15 @@ function Register() {
             {error && (
                 <div style={{ backgroundColor: '#ffebee', color: '#c62828', padding: '10px', borderRadius: '4px', marginBottom: '20px' }}>
                     {error}
+                </div>
+            )}
+
+            {success && (
+                <div style={{ backgroundColor: '#d4edda', color: '#155724', padding: '15px', borderRadius: '8px', marginBottom: '20px', textAlign: 'center' }}>
+                    <strong>✅ {success}</strong>
+                    <p style={{ marginTop: '10px', fontSize: '14px' }}>
+                        После подтверждения вы сможете войти в систему.
+                    </p>
                 </div>
             )}
 
@@ -83,11 +106,12 @@ function Register() {
                 </div>
 
                 <div style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>Email</label>
+                    <label style={{ display: 'block', marginBottom: '5px' }}>Email *</label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        required
                         style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }}
                     />
                 </div>

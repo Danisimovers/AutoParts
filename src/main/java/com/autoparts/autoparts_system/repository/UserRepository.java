@@ -39,26 +39,37 @@ public class UserRepository {
         }
     }
 
+    public User findByEmail(String email) {
+        String sql = "SELECT * FROM users WHERE email = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(User.class), email);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public void save(User user) {
-        String sql = "INSERT INTO users (login, password, role, email, phone, created_at) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO users (login, password, role, email, phone, created_at, enabled) VALUES (?, ?, ?, ?, ?, ?, ?)";
         jdbcTemplate.update(sql,
                 user.getLogin(),
                 user.getPassword(),
                 user.getRole().name(),
                 user.getEmail(),
                 user.getPhone(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.isEnabled()
         );
     }
 
     public void update(User user) {
-        String sql = "UPDATE users SET login = ?, password = ?, role = ?, email = ?, phone = ? WHERE id = ?";
+        String sql = "UPDATE users SET login = ?, password = ?, role = ?, email = ?, phone = ?, enabled = ? WHERE id = ?";
         jdbcTemplate.update(sql,
                 user.getLogin(),
                 user.getPassword(),
                 user.getRole().name(),
                 user.getEmail(),
                 user.getPhone(),
+                user.isEnabled(),
                 user.getId()
         );
     }

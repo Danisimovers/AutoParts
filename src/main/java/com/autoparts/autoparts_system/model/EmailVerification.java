@@ -8,13 +8,15 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class EmailVerification {
     private Long id;
+    private Long userId;
+    private String token;
+    private LocalDateTime createdAt;
+    private LocalDateTime expiresAt;
+    private boolean verified;
     private String login;
-    private String password;
-    private Role role;
+    private String passwordHash;
     private String email;
     private String phone;
-    private LocalDateTime createdAt;
-    private boolean enabled;
 }

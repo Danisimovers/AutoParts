@@ -1,13 +1,17 @@
 package com.autoparts.autoparts_system.service;
 
+import com.autoparts.autoparts_system.model.EmailVerification;
 import com.autoparts.autoparts_system.model.User;
 import com.autoparts.autoparts_system.model.Role;
+import com.autoparts.autoparts_system.repository.EmailVerificationRepository;
 import com.autoparts.autoparts_system.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -17,6 +21,12 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private EmailVerificationRepository emailVerificationRepository;
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -30,35 +40,107 @@ public class UserService {
         return userRepository.findByLogin(login);
     }
 
-    public User registerUser(String login, String password, String email, String phone) {
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    /**
+     * Временная регистрация - сохраняем данные в таблицу verification, пользователь НЕ создается
+     */
+    public void registerUserTemp(String login, String password, String email, String phone) {
         if (login == null || login.trim().isEmpty()) {
             throw new IllegalArgumentException("Логин обязателен");
         }
         if (password == null || password.trim().isEmpty()) {
             throw new IllegalArgumentException("Пароль обязателен");
         }
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email обязателен");
+        }
 
+        // Проверяем, не занят ли логин
         User existing = userRepository.findByLogin(login);
         if (existing != null) {
             throw new IllegalArgumentException("Пользователь с таким логином уже существует");
         }
 
+        // Проверяем, не занят ли email
+        User existingEmail = userRepository.findByEmail(email);
+        if (existingEmail != null) {
+            throw new IllegalArgumentException("Пользователь с таким email уже существует");
+        }
+
+        // Удаляем старую неподтвержденную регистрацию, если есть
+        emailVerificationRepository.deleteByEmail(email);
+
+        // Создаем запись верификации (без создания пользователя!)
+        String token = UUID.randomUUID().toString();
+        EmailVerification verification = new EmailVerification();
+        verification.setUserId(null); // Пользователь еще не создан
+        verification.setToken(token);
+        verification.setExpiresAt(LocalDateTime.now().plusHours(24));
+        verification.setVerified(false);
+        verification.setLogin(login);
+        verification.setPasswordHash(passwordEncoder.encode(password));
+        verification.setEmail(email);
+        verification.setPhone(phone);
+
+        emailVerificationRepository.save(verification);
+
+        // Отправляем email
+        try {
+            emailService.sendVerificationEmail(email, token);
+            System.out.println("Verification email sent to: " + email);
+        } catch (Exception e) {
+            System.err.println("Ошибка отправки email: " + e.getMessage());
+            throw new RuntimeException("Не удалось отправить письмо подтверждения. Попробуйте позже.");
+        }
+    }
+
+    /**
+     * Подтверждение email и создание пользователя
+     */
+    @Transactional
+    public User confirmAndCreateUser(String token) {
+        EmailVerification verification = emailVerificationRepository.findByToken(token);
+
+        if (verification == null) {
+            throw new IllegalArgumentException("Неверный токен подтверждения");
+        }
+
+        if (verification.isVerified()) {
+            throw new IllegalArgumentException("Email уже подтвержден");
+        }
+
+        if (verification.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Срок действия ссылки истек. Запросите новое письмо.");
+        }
+
+        // Создаем пользователя
         User user = new User();
-        user.setLogin(login);
-        user.setPassword(passwordEncoder.encode(password));
+        user.setLogin(verification.getLogin());
+        user.setPassword(verification.getPasswordHash());
         user.setRole(Role.CUSTOMER);
-        user.setEmail(email);
-        user.setPhone(phone);
+        user.setEmail(verification.getEmail());
+        user.setPhone(verification.getPhone());
         user.setCreatedAt(LocalDateTime.now());
+        user.setEnabled(true); // Сразу активен после подтверждения
 
         userRepository.save(user);
+
+        // Обновляем запись верификации
+        verification.setVerified(true);
+        verification.setUserId(user.getId());
+        emailVerificationRepository.update(verification);
+
+        System.out.println("User created and activated: " + user.getLogin());
+
         return user;
     }
 
     public User login(String login, String password) {
         System.out.println("=== LOGIN ATTEMPT ===");
         System.out.println("Login: " + login);
-        System.out.println("Password: " + password);
 
         User user = userRepository.findByLogin(login);
         if (user == null) {
@@ -67,8 +149,12 @@ public class UserService {
         }
 
         System.out.println("User found: " + user.getLogin());
-        System.out.println("Stored password hash: " + user.getPassword());
-        System.out.println("Password matches: " + passwordEncoder.matches(password, user.getPassword()));
+        System.out.println("User enabled: " + user.isEnabled());
+
+        if (!user.isEnabled()) {
+            System.out.println("Account not verified!");
+            throw new IllegalArgumentException("Аккаунт не активирован. Проверьте почту и перейдите по ссылке подтверждения.");
+        }
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
             System.out.println("Password mismatch!");
@@ -85,7 +171,7 @@ public class UserService {
             throw new IllegalArgumentException("Пользователь не найден");
         }
         user.setId(id);
-        // Если пароль передан, хэшируем его
+        user.setEnabled(existing.isEnabled());
         if (user.getPassword() != null && !user.getPassword().isEmpty()) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
         } else {
@@ -96,6 +182,7 @@ public class UserService {
     }
 
     public void deleteUser(Long id) {
+        emailVerificationRepository.deleteByUserId(id);
         userRepository.deleteById(id);
     }
 }

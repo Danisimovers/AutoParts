@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import MyOrders from './pages/MyOrders';
 import OrderDetail from './pages/OrderDetail';
+import VerifyEmail from './pages/VerifyEmail';
 
 function NavBar() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -72,6 +73,7 @@ function AppRoutes() {
             <Route path="/register" element={<Register />} />
             <Route path="/my-orders" element={isAuthenticated ? <MyOrders /> : <Navigate to="/login" />} />
             <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
+            <Route path="/verify" element={<VerifyEmail />} />
         </Routes>
     );
 }
