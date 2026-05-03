@@ -11,64 +11,66 @@ import MyOrders from './pages/MyOrders';
 import OrderDetail from './pages/OrderDetail';
 import VerifyEmail from './pages/VerifyEmail';
 
-//ADMIN
-
+// ADMIN
 import AdminLayout from './pages/Admin/AdminLayout';
 import AdminProducts from './pages/Admin/AdminProducts';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminStock from './pages/Admin/AdminStock';
 
 function NavBar() {
-  const { user, logout, isAuthenticated } = useAuth();
+    const { user, logout, isAuthenticated } = useAuth();
 
-  return (
-      <nav style={{
-        backgroundColor: '#333',
-        padding: '15px',
-        display: 'flex',
-        gap: '20px',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <div style={{ display: 'flex', gap: '20px' }}>
-          <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>Каталог</Link>
-          <Link to="/cart" style={{ color: 'white', textDecoration: 'none' }}>Корзина</Link>
-          {isAuthenticated && (
-              <Link to="/my-orders" style={{ color: 'white', textDecoration: 'none' }}>Мои заказы</Link>
-          )}
-        </div>
+    return (
+        <nav style={{
+            backgroundColor: '#333',
+            padding: '15px',
+            display: 'flex',
+            gap: '20px',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+        }}>
+            <div style={{ display: 'flex', gap: '20px' }}>
+                <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>Каталог</Link>
+                <Link to="/cart" style={{ color: 'white', textDecoration: 'none' }}>Корзина</Link>
+                {isAuthenticated && (
+                    <Link to="/my-orders" style={{ color: 'white', textDecoration: 'none' }}>Мои заказы</Link>
+                )}
+                {isAuthenticated && user?.role === 'ADMIN' && (
+                    <Link to="/admin/products" style={{ color: 'white', textDecoration: 'none' }}>Админ-панель</Link>
+                )}
+            </div>
 
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          {isAuthenticated ? (
-              <>
-                <span style={{ color: 'white' }}>Привет, {user?.login}</span>
-                <button
-                    onClick={logout}
-                    style={{
-                      backgroundColor: '#ff4444',
-                      color: 'white',
-                      border: 'none',
-                      padding: '5px 15px',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                >
-                  Выйти
-                </button>
-              </>
-          ) : (
-              <>
-                <Link to="/login" style={{ color: 'white', textDecoration: 'none' }}>Вход</Link>
-                <Link to="/register" style={{ color: 'white', textDecoration: 'none' }}>Регистрация</Link>
-              </>
-          )}
-        </div>
-      </nav>
-  );
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                {isAuthenticated ? (
+                    <>
+                        <span style={{ color: 'white' }}>Привет, {user?.login}</span>
+                        <button
+                            onClick={logout}
+                            style={{
+                                backgroundColor: '#ff4444',
+                                color: 'white',
+                                border: 'none',
+                                padding: '5px 15px',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Выйти
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <Link to="/login" style={{ color: 'white', textDecoration: 'none' }}>Вход</Link>
+                        <Link to="/register" style={{ color: 'white', textDecoration: 'none' }}>Регистрация</Link>
+                    </>
+                )}
+            </div>
+        </nav>
+    );
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();  // <-- ДОБАВЬ user
 
     return (
         <Routes>
@@ -92,14 +94,14 @@ function AppRoutes() {
 }
 
 function App() {
-  return (
-      <BrowserRouter>
-        <AuthProvider>
-          <NavBar />
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
-  );
+    return (
+        <BrowserRouter>
+            <AuthProvider>
+                <NavBar />
+                <AppRoutes />
+            </AuthProvider>
+        </BrowserRouter>
+    );
 }
 
 export default App;
