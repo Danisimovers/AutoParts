@@ -260,6 +260,15 @@ public class UserService {
         }
     }
 
+    public void changeUserRole(Long userId, String roleName) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            throw new IllegalArgumentException("Пользователь не найден");
+        }
+        user.setRole(Role.valueOf(roleName));
+        userRepository.update(user);
+    }
+
     // Сброс пароля по токену
     @Transactional
     public void resetPassword(String token, String newPassword) {
@@ -298,5 +307,6 @@ public class UserService {
         passwordResetTokenRepository.markAsUsed(resetToken.getId());
 
         System.out.println("Password reset for user: " + user.getLogin());
+
     }
 }

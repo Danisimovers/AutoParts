@@ -118,12 +118,7 @@ public class AdminController {
     @PutMapping("/users/{id}/role")
     public ResponseEntity<ApiResponse> changeUserRole(@PathVariable Long id, @RequestParam String role) {
         try {
-            User user = userService.getUserById(id);
-            if (user == null) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Пользователь не найден"));
-            }
-            user.setRole(com.autoparts.autoparts_system.model.Role.valueOf(role));
-            userService.updateUser(id, user);
+            userService.changeUserRole(id, role);
             return ResponseEntity.ok(ApiResponse.success("Роль пользователя изменена", null));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));

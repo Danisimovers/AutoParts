@@ -22,6 +22,9 @@ import ManagerLayout from './pages/Manager/ManagerLayout';
 import VinRequests from './pages/Manager/VinRequests';
 import ManagerOrders from './pages/Manager/ManagerOrders';
 
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+
 function NavBar() {
     const { user, logout, isAuthenticated } = useAuth();
 
@@ -104,6 +107,9 @@ function AppRoutes() {
                 <Route path="vin-requests" element={<VinRequests />} />
                 <Route path="orders" element={<ManagerOrders />} />
             </Route>
+
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
     );
 }
