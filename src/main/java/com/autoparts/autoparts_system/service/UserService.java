@@ -1,9 +1,11 @@
 package com.autoparts.autoparts_system.service;
 
 import com.autoparts.autoparts_system.model.EmailVerification;
+import com.autoparts.autoparts_system.model.PasswordResetToken;
 import com.autoparts.autoparts_system.model.User;
 import com.autoparts.autoparts_system.model.Role;
 import com.autoparts.autoparts_system.repository.EmailVerificationRepository;
+import com.autoparts.autoparts_system.repository.PasswordResetTokenRepository;
 import com.autoparts.autoparts_system.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +30,9 @@ public class UserService {
 
     @Autowired
     private EmailVerificationRepository emailVerificationRepository;
+
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;  // <-- ДОБАВЛЕНО
 
     // Регулярное выражение для проверки email
     private static final Pattern EMAIL_PATTERN =
@@ -215,5 +220,83 @@ public class UserService {
     public void deleteUser(Long id) {
         emailVerificationRepository.deleteByUserId(id);
         userRepository.deleteById(id);
+    }
+
+    // ========== МЕТОДЫ ДЛЯ ВОССТАНОВЛЕНИЯ ПАРОЛЯ ==========
+
+    // Отправка письма для сброса пароля
+    public void sendPasswordResetLink(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email обязателен");
+        }
+
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            // Не раскрываем, существует email или нет (для безопасности)
+            System.out.println("Password reset requested for non-existent email: " + email);
+            return;
+        }
+
+        // Удаляем старые неиспользованные токены для этого email
+        passwordResetTokenRepository.deleteByEmail(email);
+
+        // Создаем новый токен
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setEmail(email);
+        resetToken.setToken(token);
+        resetToken.setExpiresAt(LocalDateTime.now().plusHours(1)); // Ссылка действительна 1 час
+        resetToken.setUsed(false);
+
+        passwordResetTokenRepository.save(resetToken);
+
+        // Отправляем email
+        try {
+            emailService.sendPasswordResetEmail(email, token);
+            System.out.println("Password reset link sent to: " + email);
+        } catch (Exception e) {
+            System.err.println("Ошибка отправки email: " + e.getMessage());
+            throw new RuntimeException("Не удалось отправить письмо для восстановления пароля. Попробуйте позже.");
+        }
+    }
+
+    // Сброс пароля по токену
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("Пароль обязателен");
+        }
+        if (newPassword.length() < 4) {
+            throw new IllegalArgumentException("Пароль должен быть не менее 4 символов");
+        }
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token);
+
+        if (resetToken == null) {
+            throw new IllegalArgumentException("Неверный токен восстановления пароля");
+        }
+
+        if (resetToken.isUsed()) {
+            throw new IllegalArgumentException("Ссылка для восстановления пароля уже использована");
+        }
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Срок действия ссылки истек. Запросите новое письмо");
+        }
+
+        // Находим пользователя по email из токена
+        User user = userRepository.findByEmail(resetToken.getEmail());
+        if (user == null) {
+            throw new IllegalArgumentException("Пользователь не найден");
+        }
+
+        // Обновляем пароль
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.update(user);
+
+        // Отмечаем токен как использованный
+        passwordResetTokenRepository.markAsUsed(resetToken.getId());
+
+        System.out.println("Password reset for user: " + user.getLogin());
     }
 }
