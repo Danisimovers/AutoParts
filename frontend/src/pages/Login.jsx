@@ -76,7 +76,11 @@ function Login() {
                 </button>
             </form>
 
-            <p style={{ textAlign: 'center', marginTop: '20px' }}>
+            <p style={{ textAlign: 'center', marginTop: '15px' }}>
+                <Link to="/forgot-password" style={{ color: '#e67e22' }}>Забыли пароль?</Link>
+            </p>
+
+            <p style={{ textAlign: 'center', marginTop: '15px' }}>
                 Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
             </p>
         </div>
