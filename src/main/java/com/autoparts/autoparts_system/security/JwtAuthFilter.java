@@ -13,10 +13,12 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.core.GrantedAuthority;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -59,10 +61,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Создаем authority с ролью пользователя
+        List<GrantedAuthority> authorities = Collections.singletonList(
+                () -> user.getRole().name()  // Возвращает "ADMIN", "MANAGER" или "CUSTOMER"
+        );
+
         UserDetails userDetails = org.springframework.security.core.userdetails.User
                 .withUsername(user.getLogin())
                 .password(user.getPassword())
-                .authorities(Collections.emptyList())
+                .authorities(authorities)  // <-- ДОБАВЛЯЕМ РОЛЬ
                 .build();
 
         UsernamePasswordAuthenticationToken authToken =
