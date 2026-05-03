@@ -29,6 +29,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Публичные эндпоинты
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/products",
@@ -43,9 +44,13 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        .requestMatchers("/api/orders/**").authenticated()
+                        // Менеджер-панель (доступ для MANAGER и ADMIN)
                         .requestMatchers("/api/manager/**").hasAnyAuthority("MANAGER", "ADMIN")
+                        // Админ-панель (только для ADMIN)
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+                        // Заказы (только для авторизованных)
+                        .requestMatchers("/api/orders/**").authenticated()
+                        // Все остальные требуют авторизации
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

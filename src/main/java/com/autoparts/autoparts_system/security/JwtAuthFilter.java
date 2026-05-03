@@ -8,12 +8,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.security.core.GrantedAuthority;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -43,6 +44,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         final String jwt = authHeader.substring(7);
 
         if (!jwtService.validateToken(jwt)) {
+            System.out.println("JWT validation failed");
             filterChain.doFilter(request, response);
             return;
         }
@@ -51,25 +53,32 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String login = jwtService.extractLogin(jwt);
 
         if (userId == null || login == null) {
+            System.out.println("userId or login is null");
             filterChain.doFilter(request, response);
             return;
         }
 
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
+            System.out.println("User not found: " + login);
             filterChain.doFilter(request, response);
             return;
         }
 
+        System.out.println("=== JWT AUTH FILTER ===");
+        System.out.println("User login: " + user.getLogin());
+        System.out.println("User role: " + user.getRole().name());
+
         // Создаем authority с ролью пользователя
         List<GrantedAuthority> authorities = Collections.singletonList(
-                () -> user.getRole().name()  // Возвращает "ADMIN", "MANAGER" или "CUSTOMER"
+                new SimpleGrantedAuthority(user.getRole().name())
         );
+        System.out.println("Authorities: " + authorities);
 
         UserDetails userDetails = org.springframework.security.core.userdetails.User
                 .withUsername(user.getLogin())
                 .password(user.getPassword())
-                .authorities(authorities)  // <-- ДОБАВЛЯЕМ РОЛЬ
+                .authorities(authorities)
                 .build();
 
         UsernamePasswordAuthenticationToken authToken =
@@ -82,6 +91,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         authToken.setDetails(details);
 
         SecurityContextHolder.getContext().setAuthentication(authToken);
+        System.out.println("Authentication set for user: " + user.getLogin());
+        System.out.println("Authorities from context: " + SecurityContextHolder.getContext().getAuthentication().getAuthorities());
 
         filterChain.doFilter(request, response);
     }

@@ -17,6 +17,11 @@ import AdminProducts from './pages/Admin/AdminProducts';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminStock from './pages/Admin/AdminStock';
 
+// MANAGER
+import ManagerLayout from './pages/Manager/ManagerLayout';
+import VinRequests from './pages/Manager/VinRequests';
+import ManagerOrders from './pages/Manager/ManagerOrders';
+
 function NavBar() {
     const { user, logout, isAuthenticated } = useAuth();
 
@@ -34,6 +39,9 @@ function NavBar() {
                 <Link to="/cart" style={{ color: 'white', textDecoration: 'none' }}>Корзина</Link>
                 {isAuthenticated && (
                     <Link to="/my-orders" style={{ color: 'white', textDecoration: 'none' }}>Мои заказы</Link>
+                )}
+                {isAuthenticated && (user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
+                    <Link to="/manager/vin-requests" style={{ color: 'white', textDecoration: 'none' }}>Менеджер</Link>
                 )}
                 {isAuthenticated && user?.role === 'ADMIN' && (
                     <Link to="/admin/products" style={{ color: 'white', textDecoration: 'none' }}>Админ-панель</Link>
@@ -70,7 +78,7 @@ function NavBar() {
 }
 
 function AppRoutes() {
-    const { isAuthenticated, user } = useAuth();  // <-- ДОБАВЬ user
+    const { isAuthenticated, user } = useAuth();
 
     return (
         <Routes>
@@ -84,10 +92,17 @@ function AppRoutes() {
             <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
             <Route path="/verify" element={<VerifyEmail />} />
 
+            {/* Админ-панель */}
             <Route path="/admin" element={isAuthenticated && user?.role === 'ADMIN' ? <AdminLayout /> : <Navigate to="/" />}>
                 <Route path="products" element={<AdminProducts />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="stock" element={<AdminStock />} />
+            </Route>
+
+            {/* Менеджер-панель */}
+            <Route path="/manager" element={isAuthenticated && (user?.role === 'MANAGER' || user?.role === 'ADMIN') ? <ManagerLayout /> : <Navigate to="/" />}>
+                <Route path="vin-requests" element={<VinRequests />} />
+                <Route path="orders" element={<ManagerOrders />} />
             </Route>
         </Routes>
     );
