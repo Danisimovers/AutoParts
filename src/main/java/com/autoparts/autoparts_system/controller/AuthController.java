@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
@@ -115,6 +117,51 @@ public class AuthController {
             return ResponseEntity.ok(ApiResponse.success("Письмо отправлено на " + email, null));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
+        }
+    }
+
+    // ========== ВОССТАНОВЛЕНИЕ ПАРОЛЯ ==========
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse> forgotPassword(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Email обязателен"));
+            }
+
+            userService.sendPasswordResetLink(email);
+
+            // Всегда возвращаем успех, даже если email не существует (безопасность)
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Если пользователь с таким email существует, на почту отправлена ссылка для восстановления пароля",
+                    null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse> resetPassword(@RequestBody Map<String, String> request) {
+        try {
+            String token = request.get("token");
+            String newPassword = request.get("newPassword");
+
+            if (token == null || token.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Токен обязателен"));
+            }
+            if (newPassword == null || newPassword.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Новый пароль обязателен"));
+            }
+            if (newPassword.length() < 4) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Пароль должен быть не менее 4 символов"));
+            }
+
+            userService.resetPassword(token, newPassword);
+
+            return ResponseEntity.ok(ApiResponse.success("Пароль успешно изменен. Теперь вы можете войти с новым паролем.", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
 }
