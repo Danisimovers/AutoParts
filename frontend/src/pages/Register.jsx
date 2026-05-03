@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import api from '../api/api';
 
 function Register() {
@@ -12,8 +11,12 @@ function Register() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
-    const { register } = useAuth();
+
+    // Валидация email
+    const validateEmail = (email) => {
+        const emailRegex = /^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$/;
+        return emailRegex.test(email);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -27,6 +30,12 @@ function Register() {
 
         if (password.length < 4) {
             setError('Пароль должен быть не менее 4 символов');
+            return;
+        }
+
+        // Проверка email
+        if (!email || !validateEmail(email)) {
+            setError('Введите корректный email (например: user@mail.ru)');
             return;
         }
 
