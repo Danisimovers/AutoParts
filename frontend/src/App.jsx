@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Catalog from './pages/Catalog';
@@ -10,6 +10,9 @@ import Register from './pages/Register';
 import MyOrders from './pages/MyOrders';
 import OrderDetail from './pages/OrderDetail';
 import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import VinRequestForm from './components/VinRequestForm';
 
 // ADMIN
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -22,10 +25,7 @@ import ManagerLayout from './pages/Manager/ManagerLayout';
 import VinRequests from './pages/Manager/VinRequests';
 import ManagerOrders from './pages/Manager/ManagerOrders';
 
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-
-function NavBar() {
+function NavBar({ showVinForm, setShowVinForm }) {
     const { user, logout, isAuthenticated } = useAuth();
 
     return (
@@ -41,7 +41,21 @@ function NavBar() {
                 <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>Каталог</Link>
                 <Link to="/cart" style={{ color: 'white', textDecoration: 'none' }}>Корзина</Link>
                 {isAuthenticated && (
-                    <Link to="/my-orders" style={{ color: 'white', textDecoration: 'none' }}>Мои заказы</Link>
+                    <>
+                        <Link to="/my-orders" style={{ color: 'white', textDecoration: 'none' }}>Мои заказы</Link>
+                        <button
+                            onClick={() => setShowVinForm(true)}
+                            style={{
+                                color: 'white',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '16px'
+                            }}
+                        >
+                            Запрос по VIN
+                        </button>
+                    </>
                 )}
                 {isAuthenticated && (user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
                     <Link to="/manager/vin-requests" style={{ color: 'white', textDecoration: 'none' }}>Менеджер</Link>
@@ -94,6 +108,8 @@ function AppRoutes() {
             <Route path="/my-orders" element={isAuthenticated ? <MyOrders /> : <Navigate to="/login" />} />
             <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
             <Route path="/verify" element={<VerifyEmail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Админ-панель */}
             <Route path="/admin" element={isAuthenticated && user?.role === 'ADMIN' ? <AdminLayout /> : <Navigate to="/" />}>
@@ -107,19 +123,19 @@ function AppRoutes() {
                 <Route path="vin-requests" element={<VinRequests />} />
                 <Route path="orders" element={<ManagerOrders />} />
             </Route>
-
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
     );
 }
 
 function App() {
+    const [showVinForm, setShowVinForm] = useState(false);
+
     return (
         <BrowserRouter>
             <AuthProvider>
-                <NavBar />
+                <NavBar showVinForm={showVinForm} setShowVinForm={setShowVinForm} />
                 <AppRoutes />
+                {showVinForm && <VinRequestForm onClose={() => setShowVinForm(false)} />}
             </AuthProvider>
         </BrowserRouter>
     );
