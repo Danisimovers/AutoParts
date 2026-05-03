@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class UserService {
@@ -27,6 +28,17 @@ public class UserService {
 
     @Autowired
     private EmailVerificationRepository emailVerificationRepository;
+
+    // Регулярное выражение для проверки email
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+
+    private boolean isValidEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        return EMAIL_PATTERN.matcher(email).matches();
+    }
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -56,6 +68,11 @@ public class UserService {
         }
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("Email обязателен");
+        }
+
+        // Проверка корректности email
+        if (!isValidEmail(email)) {
+            throw new IllegalArgumentException("Введите корректный email (пример: user@mail.ru)");
         }
 
         // Проверяем, не занят ли логин
