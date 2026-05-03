@@ -40,6 +40,15 @@ public class UserService {
         return EMAIL_PATTERN.matcher(email).matches();
     }
 
+    private boolean isValidPhone(String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return true;
+        }
+        String cleaned = phone.replaceAll("[^\\d+]", "");
+        // Форматы: +79161234567, 89161234567, 9161234567
+        return cleaned.matches("^(\\+7|8)?9\\d{9}$");
+    }
+
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
@@ -73,6 +82,11 @@ public class UserService {
         // Проверка корректности email
         if (!isValidEmail(email)) {
             throw new IllegalArgumentException("Введите корректный email (пример: user@mail.ru)");
+        }
+
+        // Проверка телефона (если указан)
+        if (phone != null && !phone.trim().isEmpty() && !isValidPhone(phone)) {
+            throw new IllegalArgumentException("Введите корректный номер телефона (например: +79161234567 или 89161234567)");
         }
 
         // Проверяем, не занят ли логин

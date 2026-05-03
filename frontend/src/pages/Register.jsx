@@ -18,6 +18,13 @@ function Register() {
         return emailRegex.test(email);
     };
 
+    const validatePhone = (phone) => {
+        if (!phone) return true;
+        const cleaned = phone.replace(/[^\d+]/g, '');
+        const phoneRegex = /^(\+7|8)?9\d{9}$/;
+        return phoneRegex.test(cleaned);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -36,6 +43,11 @@ function Register() {
         // Проверка email
         if (!email || !validateEmail(email)) {
             setError('Введите корректный email (например: user@mail.ru)');
+            return;
+        }
+
+        if (phone && !validatePhone(phone)) {
+            setError('Введите корректный номер телефона (например: +79161234567 или 89161234567)');
             return;
         }
 
