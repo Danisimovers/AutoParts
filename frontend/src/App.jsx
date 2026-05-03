@@ -11,6 +11,13 @@ import MyOrders from './pages/MyOrders';
 import OrderDetail from './pages/OrderDetail';
 import VerifyEmail from './pages/VerifyEmail';
 
+//ADMIN
+
+import AdminLayout from './pages/Admin/AdminLayout';
+import AdminProducts from './pages/Admin/AdminProducts';
+import AdminUsers from './pages/Admin/AdminUsers';
+import AdminStock from './pages/Admin/AdminStock';
+
 function NavBar() {
   const { user, logout, isAuthenticated } = useAuth();
 
@@ -74,6 +81,12 @@ function AppRoutes() {
             <Route path="/my-orders" element={isAuthenticated ? <MyOrders /> : <Navigate to="/login" />} />
             <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
             <Route path="/verify" element={<VerifyEmail />} />
+
+            <Route path="/admin" element={isAuthenticated && user?.role === 'ADMIN' ? <AdminLayout /> : <Navigate to="/" />}>
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="stock" element={<AdminStock />} />
+            </Route>
         </Routes>
     );
 }
