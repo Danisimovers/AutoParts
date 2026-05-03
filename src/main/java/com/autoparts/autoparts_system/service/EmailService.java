@@ -37,4 +37,32 @@ public class EmailService {
             throw new RuntimeException("Ошибка отправки письма: " + e.getMessage());
         }
     }
+
+
+    public void sendPasswordResetEmail(String to, String token) {
+        String subject = "Восстановление пароля - AutoParts Shop";
+        String resetUrl = "http://localhost:5173/reset-password?token=" + token;
+        String text = "Здравствуйте!\n\n"
+                + "Вы запросили восстановление пароля в магазине автозапчастей AutoParts Shop.\n\n"
+                + "Для сброса пароля перейдите по ссылке:\n\n"
+                + resetUrl + "\n\n"
+                + "Ссылка действительна 1 час.\n\n"
+                + "Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.\n\n"
+                + "С уважением,\n"
+                + "Команда AutoParts Shop";
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(text);
+        message.setFrom("kazauto1005@mail.ru");
+
+        try {
+            mailSender.send(message);
+            System.out.println("Password reset email sent to: " + to);
+        } catch (Exception e) {
+            System.err.println("Failed to send password reset email: " + e.getMessage());
+            throw new RuntimeException("Ошибка отправки письма для восстановления пароля");
+        }
+    }
 }
