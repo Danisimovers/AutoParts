@@ -12,6 +12,7 @@ import OrderDetail from './pages/OrderDetail';
 import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Profile from './pages/Profile';
 import VinRequestForm from './components/VinRequestForm';
 
 // ADMIN
@@ -27,6 +28,7 @@ import ManagerOrders from './pages/Manager/ManagerOrders';
 
 function NavBar({ showVinForm, setShowVinForm }) {
     const { user, logout, isAuthenticated } = useAuth();
+    const [showDropdown, setShowDropdown] = useState(false);
 
     return (
         <nav style={{
@@ -42,7 +44,6 @@ function NavBar({ showVinForm, setShowVinForm }) {
                 <Link to="/cart" style={{ color: 'white', textDecoration: 'none' }}>Корзина</Link>
                 {isAuthenticated && (
                     <>
-                        <Link to="/my-orders" style={{ color: 'white', textDecoration: 'none' }}>Мои заказы</Link>
                         <button
                             onClick={() => setShowVinForm(true)}
                             style={{
@@ -65,29 +66,92 @@ function NavBar({ showVinForm, setShowVinForm }) {
                 )}
             </div>
 
-            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+            <div style={{ position: 'relative' }}>
                 {isAuthenticated ? (
                     <>
-                        <span style={{ color: 'white' }}>Привет, {user?.login}</span>
                         <button
-                            onClick={logout}
+                            onClick={() => setShowDropdown(!showDropdown)}
                             style={{
-                                backgroundColor: '#ff4444',
+                                backgroundColor: '#555',
                                 color: 'white',
                                 border: 'none',
-                                padding: '5px 15px',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
+                                borderRadius: '50%',
+                                width: '40px',
+                                height: '40px',
+                                fontSize: '18px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
                             }}
                         >
-                            Выйти
+                            {user?.login?.charAt(0).toUpperCase()}
                         </button>
+
+                        {showDropdown && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '50px',
+                                right: '0',
+                                backgroundColor: 'white',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                minWidth: '180px',
+                                zIndex: 100
+                            }}>
+                                <Link
+                                    to="/profile"
+                                    onClick={() => setShowDropdown(false)}
+                                    style={{
+                                        display: 'block',
+                                        padding: '10px 20px',
+                                        color: '#333',
+                                        textDecoration: 'none',
+                                        borderBottom: '1px solid #eee'
+                                    }}
+                                >
+                                    👤 Личный кабинет
+                                </Link>
+                                <Link
+                                    to="/my-orders"
+                                    onClick={() => setShowDropdown(false)}
+                                    style={{
+                                        display: 'block',
+                                        padding: '10px 20px',
+                                        color: '#333',
+                                        textDecoration: 'none',
+                                        borderBottom: '1px solid #eee'
+                                    }}
+                                >
+                                    📦 Мои заказы
+                                </Link>
+                                <button
+                                    onClick={() => {
+                                        setShowDropdown(false);
+                                        logout();
+                                    }}
+                                    style={{
+                                        display: 'block',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        padding: '10px 20px',
+                                        color: '#f44336',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontSize: '14px'
+                                    }}
+                                >
+                                    🚪 Выйти
+                                </button>
+                            </div>
+                        )}
                     </>
                 ) : (
-                    <>
+                    <div style={{ display: 'flex', gap: '15px' }}>
                         <Link to="/login" style={{ color: 'white', textDecoration: 'none' }}>Вход</Link>
                         <Link to="/register" style={{ color: 'white', textDecoration: 'none' }}>Регистрация</Link>
-                    </>
+                    </div>
                 )}
             </div>
         </nav>
@@ -105,11 +169,14 @@ function AppRoutes() {
             <Route path="/order-success" element={<OrderSuccess />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/my-orders" element={isAuthenticated ? <MyOrders /> : <Navigate to="/login" />} />
-            <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
             <Route path="/verify" element={<VerifyEmail />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Защищенные маршруты */}
+            <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+            <Route path="/my-orders" element={isAuthenticated ? <MyOrders /> : <Navigate to="/login" />} />
+            <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
 
             {/* Админ-панель */}
             <Route path="/admin" element={isAuthenticated && user?.role === 'ADMIN' ? <AdminLayout /> : <Navigate to="/" />}>
