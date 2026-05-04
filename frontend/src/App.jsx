@@ -15,6 +15,8 @@ import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import VinRequestForm from './components/VinRequestForm';
 import NotificationBell from './components/NotificationBell';
+import UserVinRequestChat from './pages/UserVinRequestChat';
+
 
 // ADMIN
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -223,6 +225,7 @@ function AppRoutes() {
             <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
             <Route path="/my-orders" element={isAuthenticated ? <MyOrders /> : <Navigate to="/login" />} />
             <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
+            <Route path="/vin-requests/:id" element={isAuthenticated ? <UserVinRequestChat /> : <Navigate to="/login" />} />
 
             {/* Админ-панель */}
             <Route path="/admin" element={isAuthenticated && user?.role === 'ADMIN' ? <AdminLayout /> : <Navigate to="/" />}>

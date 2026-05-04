@@ -158,7 +158,7 @@ function NotificationBell() {
                                     border: 'none',
                                     cursor: 'pointer',
                                     fontSize: '12px',
-                                    color: '#6a6664'
+                                    color: '#e67e22'
                                 }}
                             >
                                 Прочитать все
@@ -177,7 +177,12 @@ function NotificationBell() {
                             notifications.map(notif => (
                                 <div
                                     key={notif.id}
-                                    onClick={() => markAsRead(notif.id)}
+                                    onClick={() => {
+                                        markAsRead(notif.id);
+                                        if (notif.link) {
+                                            window.location.href = notif.link;
+                                        }
+                                    }}
                                     style={{
                                         padding: '12px 16px',
                                         borderBottom: '1px solid #eee',

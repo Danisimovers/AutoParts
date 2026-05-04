@@ -2,9 +2,13 @@ package com.autoparts.autoparts_system.controller;
 
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.model.Notification;
+import com.autoparts.autoparts_system.model.VinMessage;
 import com.autoparts.autoparts_system.model.VinRequest;
+import com.autoparts.autoparts_system.model.User;
 import com.autoparts.autoparts_system.repository.NotificationRepository;
+import com.autoparts.autoparts_system.repository.VinMessageRepository;
 import com.autoparts.autoparts_system.repository.VinRequestRepository;
+import com.autoparts.autoparts_system.repository.UserRepository;
 import com.autoparts.autoparts_system.security.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +36,12 @@ public class VinRequestController {
     @Autowired
     private NotificationRepository notificationRepository;
 
+    @Autowired
+    private VinMessageRepository vinMessageRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
     @PostMapping
     public ResponseEntity<ApiResponse> createVinRequest(
             @RequestBody Map<String, String> request,
@@ -56,9 +66,6 @@ public class VinRequestController {
 
             vinRequestRepository.save(vinRequest);
 
-
-
-
             String sql = "SELECT id FROM users WHERE role = 'MANAGER' OR role = 'ADMIN'";
             List<Long> managerIds = jdbcTemplate.queryForList(sql, Long.class);
 
@@ -76,6 +83,69 @@ public class VinRequestController {
             return ResponseEntity.ok(ApiResponse.success("Заявка отправлена. Менеджер свяжется с вами.", null));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка отправки заявки: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse> getVinRequestById(@PathVariable Long id) {
+        VinRequest vinRequest = vinRequestRepository.findById(id);
+        if (vinRequest == null) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Заявка не найдена"));
+        }
+        return ResponseEntity.ok(ApiResponse.success("Заявка загружена", vinRequest));
+    }
+
+    @GetMapping("/{id}/messages")
+    public ResponseEntity<ApiResponse> getMessagesByVinRequest(@PathVariable Long id) {
+        List<VinMessage> messages = vinMessageRepository.findByVinRequestId(id);
+        return ResponseEntity.ok(ApiResponse.success("Сообщения загружены", messages));
+    }
+
+    @PostMapping("/{id}/messages")
+    public ResponseEntity<ApiResponse> sendUserMessage(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.substring(7);
+            Long senderId = jwtService.extractUserId(token);
+            String message = request.get("message");
+
+            if (message == null || message.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Сообщение не может быть пустым"));
+            }
+
+            // Получаем информацию об отправителе (пользователе)
+            User sender = userRepository.findById(senderId).orElse(null);
+            String senderRole = sender != null ? sender.getRole().name() : "UNKNOWN";
+            String senderLogin = sender != null ? sender.getLogin() : "Unknown";
+
+            VinMessage vinMessage = new VinMessage();
+            vinMessage.setVinRequestId(id);
+            vinMessage.setSenderId(senderId);
+            vinMessage.setSenderRole(senderRole);
+            vinMessage.setSenderLogin(senderLogin);
+            vinMessage.setMessage(message);
+            vinMessageRepository.save(vinMessage);
+
+            // Уведомление менеджерам
+            String sql = "SELECT id FROM users WHERE role = 'MANAGER' OR role = 'ADMIN'";
+            List<Long> managerIds = jdbcTemplate.queryForList(sql, Long.class);
+
+            for (Long managerId : managerIds) {
+                Notification notification = new Notification();
+                notification.setUserId(managerId);
+                notification.setType("VIN_RESPONSE");
+                notification.setTitle("Новое сообщение в VIN-заявке");
+                notification.setMessage("Пользователь ответил в заявке #" + id);
+                notification.setLink("/manager/vin-requests/" + id);
+                notification.setRead(false);
+                notificationRepository.save(notification);
+            }
+
+            return ResponseEntity.ok(ApiResponse.success("Сообщение отправлено", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка отправки: " + e.getMessage()));
         }
     }
 }

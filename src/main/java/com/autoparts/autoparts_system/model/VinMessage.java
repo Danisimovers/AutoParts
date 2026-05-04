@@ -12,6 +12,8 @@ public class VinMessage {
     private Long id;
     private Long vinRequestId;
     private Long senderId;
+    private String senderRole;
+    private String senderLogin;
     private String message;
     private LocalDateTime createdAt;
 }

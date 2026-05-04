@@ -5,6 +5,7 @@ import com.autoparts.autoparts_system.model.Notification;
 import com.autoparts.autoparts_system.model.SalesOrder;
 import com.autoparts.autoparts_system.model.VinMessage;
 import com.autoparts.autoparts_system.model.VinRequest;
+import com.autoparts.autoparts_system.model.User;
 import com.autoparts.autoparts_system.repository.*;
 import com.autoparts.autoparts_system.security.JwtService;
 import com.autoparts.autoparts_system.service.OrderService;
@@ -39,7 +40,7 @@ public class ManagerController {
     private UserRepository userRepository;
 
     @Autowired
-    private JwtService jwtService;  // <-- ДОБАВЬ ЭТО
+    private JwtService jwtService;
 
     @GetMapping("/vin-requests")
     public ResponseEntity<ApiResponse> getAllVinRequests() {
@@ -93,9 +94,16 @@ public class ManagerController {
                 return ResponseEntity.badRequest().body(ApiResponse.error("Сообщение не может быть пустым"));
             }
 
+            // Получаем информацию об отправителе (менеджере/админе)
+            User sender = userRepository.findById(senderId).orElse(null);
+            String senderRole = sender != null ? sender.getRole().name() : "UNKNOWN";
+            String senderLogin = sender != null ? sender.getLogin() : "Unknown";
+
             VinMessage vinMessage = new VinMessage();
             vinMessage.setVinRequestId(id);
             vinMessage.setSenderId(senderId);
+            vinMessage.setSenderRole(senderRole);
+            vinMessage.setSenderLogin(senderLogin);
             vinMessage.setMessage(message);
             vinMessageRepository.save(vinMessage);
 
@@ -106,7 +114,7 @@ public class ManagerController {
                 notification.setType("VIN_RESPONSE");
                 notification.setTitle("Ответ по вашей VIN-заявке");
                 notification.setMessage("Менеджер ответил на ваш запрос по VIN: " + vinRequest.getVin());
-                notification.setLink("/profile?tab=vin-requests");
+                notification.setLink("/vin-requests/" + id);
                 notification.setRead(false);
                 notificationRepository.save(notification);
             }

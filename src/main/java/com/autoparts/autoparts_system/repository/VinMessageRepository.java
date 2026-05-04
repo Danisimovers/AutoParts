@@ -16,10 +16,12 @@ public class VinMessageRepository {
     private JdbcTemplate jdbcTemplate;
 
     public void save(VinMessage message) {
-        String sql = "INSERT INTO vin_messages (vin_request_id, sender_id, message, created_at) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO vin_messages (vin_request_id, sender_id, sender_role, sender_login, message, created_at) VALUES (?, ?, ?, ?, ?, ?)";
         jdbcTemplate.update(sql,
                 message.getVinRequestId(),
                 message.getSenderId(),
+                message.getSenderRole(),
+                message.getSenderLogin(),
                 message.getMessage(),
                 LocalDateTime.now()
         );
