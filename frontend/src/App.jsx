@@ -14,6 +14,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import VinRequestForm from './components/VinRequestForm';
+import NotificationBell from './components/NotificationBell';
 
 // ADMIN
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -30,55 +31,66 @@ function NavBar({ showVinForm, setShowVinForm }) {
     const { user, logout, isAuthenticated } = useAuth();
     const [showDropdown, setShowDropdown] = useState(false);
 
+    // Закрываем меню при клике вне
+    React.useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (showDropdown && !event.target.closest('.dropdown-container')) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [showDropdown]);
+
     return (
         <nav style={{
             backgroundColor: '#333',
-            padding: '15px',
+            padding: '15px 20px',
             display: 'flex',
             gap: '20px',
             justifyContent: 'space-between',
             alignItems: 'center'
         }}>
-            <div style={{ display: 'flex', gap: '20px' }}>
+            {/* Левая часть - основные ссылки */}
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>Каталог</Link>
                 <Link to="/cart" style={{ color: 'white', textDecoration: 'none' }}>Корзина</Link>
                 {isAuthenticated && (
-                    <>
-                        <button
-                            onClick={() => setShowVinForm(true)}
-                            style={{
-                                color: 'white',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '16px'
-                            }}
-                        >
-                            Запрос по VIN
-                        </button>
-                    </>
+                    <Link to="/my-orders" style={{ color: 'white', textDecoration: 'none' }}>Мои заказы</Link>
                 )}
-                {isAuthenticated && (user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
-                    <Link to="/manager/vin-requests" style={{ color: 'white', textDecoration: 'none' }}>Менеджер</Link>
-                )}
-                {isAuthenticated && user?.role === 'ADMIN' && (
-                    <Link to="/admin/products" style={{ color: 'white', textDecoration: 'none' }}>Админ-панель</Link>
+                {isAuthenticated && (
+                    <button
+                        onClick={() => setShowVinForm(true)}
+                        style={{
+                            color: 'white',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '16px'
+                        }}
+                    >
+                        Запрос по VIN
+                    </button>
                 )}
             </div>
 
-            <div style={{ position: 'relative' }}>
+            {/* Правая часть - профиль */}
+            <div className="dropdown-container" style={{ display: 'flex', alignItems: 'center', gap: '15px', position: 'relative' }}>
                 {isAuthenticated ? (
                     <>
+                        <NotificationBell />
+                        <span style={{ color: 'white' }}>Здравствуйте, {user?.login}</span>
                         <button
                             onClick={() => setShowDropdown(!showDropdown)}
                             style={{
-                                backgroundColor: '#555',
+                                backgroundColor: '#e67e22',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '50%',
-                                width: '40px',
-                                height: '40px',
-                                fontSize: '18px',
+                                width: '36px',
+                                height: '36px',
+                                fontSize: '16px',
+                                fontWeight: 'bold',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -91,40 +103,72 @@ function NavBar({ showVinForm, setShowVinForm }) {
                         {showDropdown && (
                             <div style={{
                                 position: 'absolute',
-                                top: '50px',
+                                top: '45px',
                                 right: '0',
                                 backgroundColor: 'white',
                                 borderRadius: '8px',
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                minWidth: '180px',
-                                zIndex: 100
+                                minWidth: '220px',
+                                zIndex: 100,
+                                overflow: 'hidden'
                             }}>
                                 <Link
                                     to="/profile"
                                     onClick={() => setShowDropdown(false)}
                                     style={{
                                         display: 'block',
-                                        padding: '10px 20px',
+                                        padding: '12px 20px',
                                         color: '#333',
                                         textDecoration: 'none',
-                                        borderBottom: '1px solid #eee'
+                                        borderBottom: '1px solid #eee',
+                                        fontSize: '14px'
                                     }}
+                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
                                 >
-                                    👤 Личный кабинет
+                                    Личный кабинет
                                 </Link>
-                                <Link
-                                    to="/my-orders"
-                                    onClick={() => setShowDropdown(false)}
-                                    style={{
-                                        display: 'block',
-                                        padding: '10px 20px',
-                                        color: '#333',
-                                        textDecoration: 'none',
-                                        borderBottom: '1px solid #eee'
-                                    }}
-                                >
-                                    📦 Мои заказы
-                                </Link>
+
+                                {/* Менеджер-панель (для MANAGER и ADMIN) */}
+                                {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
+                                    <Link
+                                        to="/manager/vin-requests"
+                                        onClick={() => setShowDropdown(false)}
+                                        style={{
+                                            display: 'block',
+                                            padding: '12px 20px',
+                                            color: '#333',
+                                            textDecoration: 'none',
+                                            borderBottom: '1px solid #eee',
+                                            fontSize: '14px'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                                    >
+                                        Менеджер-панель
+                                    </Link>
+                                )}
+
+                                {/* Админ-панель (только для ADMIN) */}
+                                {user?.role === 'ADMIN' && (
+                                    <Link
+                                        to="/admin/products"
+                                        onClick={() => setShowDropdown(false)}
+                                        style={{
+                                            display: 'block',
+                                            padding: '12px 20px',
+                                            color: '#333',
+                                            textDecoration: 'none',
+                                            borderBottom: '1px solid #eee',
+                                            fontSize: '14px'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                                    >
+                                        Админ-панель
+                                    </Link>
+                                )}
+
                                 <button
                                     onClick={() => {
                                         setShowDropdown(false);
@@ -134,15 +178,17 @@ function NavBar({ showVinForm, setShowVinForm }) {
                                         display: 'block',
                                         width: '100%',
                                         textAlign: 'left',
-                                        padding: '10px 20px',
+                                        padding: '12px 20px',
                                         color: '#f44336',
                                         background: 'none',
                                         border: 'none',
                                         cursor: 'pointer',
                                         fontSize: '14px'
                                     }}
+                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
                                 >
-                                    🚪 Выйти
+                                    Выйти
                                 </button>
                             </div>
                         )}
@@ -173,7 +219,6 @@ function AppRoutes() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Защищенные маршруты */}
             <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
             <Route path="/my-orders" element={isAuthenticated ? <MyOrders /> : <Navigate to="/login" />} />
             <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
