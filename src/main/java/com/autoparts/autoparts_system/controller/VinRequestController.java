@@ -1,14 +1,18 @@
 package com.autoparts.autoparts_system.controller;
 
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
+import com.autoparts.autoparts_system.model.Notification;
 import com.autoparts.autoparts_system.model.VinRequest;
+import com.autoparts.autoparts_system.repository.NotificationRepository;
 import com.autoparts.autoparts_system.repository.VinRequestRepository;
 import com.autoparts.autoparts_system.security.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,6 +25,12 @@ public class VinRequestController {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @PostMapping
     public ResponseEntity<ApiResponse> createVinRequest(
@@ -45,6 +55,23 @@ public class VinRequestController {
             vinRequest.setCreatedAt(LocalDateTime.now());
 
             vinRequestRepository.save(vinRequest);
+
+
+
+
+            String sql = "SELECT id FROM users WHERE role = 'MANAGER' OR role = 'ADMIN'";
+            List<Long> managerIds = jdbcTemplate.queryForList(sql, Long.class);
+
+            for (Long managerId : managerIds) {
+                Notification notification = new Notification();
+                notification.setUserId(managerId);
+                notification.setType("VIN_REQUEST");
+                notification.setTitle("Новая VIN-заявка");
+                notification.setMessage("Пользователь отправил запрос на подбор запчастей по VIN: " + vin);
+                notification.setLink("/manager/vin-requests");
+                notification.setRead(false);
+                notificationRepository.save(notification);
+            }
 
             return ResponseEntity.ok(ApiResponse.success("Заявка отправлена. Менеджер свяжется с вами.", null));
         } catch (Exception e) {

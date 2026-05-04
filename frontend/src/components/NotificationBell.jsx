@@ -158,7 +158,7 @@ function NotificationBell() {
                                     border: 'none',
                                     cursor: 'pointer',
                                     fontSize: '12px',
-                                    color: '#e67e22'
+                                    color: '#6a6664'
                                 }}
                             >
                                 Прочитать все
