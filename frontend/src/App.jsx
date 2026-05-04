@@ -25,6 +25,7 @@ import AdminStock from './pages/Admin/AdminStock';
 // MANAGER
 import ManagerLayout from './pages/Manager/ManagerLayout';
 import VinRequests from './pages/Manager/VinRequests';
+import VinRequestChat from './pages/Manager/VinRequestChat';
 import ManagerOrders from './pages/Manager/ManagerOrders';
 
 function NavBar({ showVinForm, setShowVinForm }) {
@@ -230,9 +231,10 @@ function AppRoutes() {
                 <Route path="stock" element={<AdminStock />} />
             </Route>
 
-            {/* Менеджер-панель */}
+            {/* Менеджер-панель (доступна для MANAGER и ADMIN) */}
             <Route path="/manager" element={isAuthenticated && (user?.role === 'MANAGER' || user?.role === 'ADMIN') ? <ManagerLayout /> : <Navigate to="/" />}>
                 <Route path="vin-requests" element={<VinRequests />} />
+                <Route path="vin-requests/:id" element={<VinRequestChat />} />
                 <Route path="orders" element={<ManagerOrders />} />
             </Route>
         </Routes>
