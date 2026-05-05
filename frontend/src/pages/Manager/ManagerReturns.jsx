@@ -106,7 +106,7 @@ function ManagerReturns() {
                         {returns.map((ret) => (
                             <tr key={ret.id} className="border-b border-gray-200">
                                 <td className="p-2">{ret.id}</td>
-                                <td className="p-2">{ret.orderItemId}</td>
+                                <td className="p-2">{ret.orderId}</td>
                                 <td className="p-2">{ret.userId}</td>
                                 <td className="p-2 max-w-xs">{ret.reason}</td>
                                 <td className="text-center p-2">

@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class Return {
     private Long id;
     private Long orderItemId;
+    private Long orderId;
     private Long userId;
     private String reason;
     private String status; // REQUESTED, APPROVED, REJECTED, COMPLETED
