@@ -5,6 +5,7 @@ function ManagerLayout() {
     const menuItems = [
         { path: '/manager/vin-requests', name: 'Заявки по VIN' },
         { path: '/manager/orders', name: 'Заказы' },
+        { path: '/manager/returns', name: 'Возвраты' },
     ];
 
     return (

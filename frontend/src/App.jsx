@@ -31,6 +31,8 @@ import ManagerLayout from './pages/Manager/ManagerLayout';
 import VinRequests from './pages/Manager/VinRequests';
 import VinRequestChat from './pages/Manager/VinRequestChat';
 import ManagerOrders from './pages/Manager/ManagerOrders';
+import ManagerReturns from './pages/Manager/ManagerReturns';
+
 
 function NavBar({ showVinForm, setShowVinForm }) {
     const { user, logout, isAuthenticated } = useAuth();
@@ -242,6 +244,7 @@ function AppRoutes() {
                 <Route path="vin-requests" element={<VinRequests />} />
                 <Route path="vin-requests/:id" element={<VinRequestChat />} />
                 <Route path="orders" element={<ManagerOrders />} />
+                <Route path="returns" element={<ManagerReturns />} />
             </Route>
         </Routes>
     );
