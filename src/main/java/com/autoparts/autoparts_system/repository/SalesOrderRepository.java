@@ -4,8 +4,14 @@ import com.autoparts.autoparts_system.model.SalesOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+
+import java.sql.PreparedStatement;
+import java.sql.Timestamp;
 import java.util.List;
+import java.util.Objects;
 
 @Repository
 public class SalesOrderRepository {
@@ -25,12 +31,30 @@ public class SalesOrderRepository {
 
     public SalesOrder findById(Long id) {
         String sql = "SELECT * FROM sales_orders WHERE id = ?";
-        return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(SalesOrder.class), id);
+        try {
+            return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(SalesOrder.class), id);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public void save(SalesOrder order) {
         String sql = "INSERT INTO sales_orders (user_id, total, status, created_at) VALUES (?, ?, ?, ?)";
-        jdbcTemplate.update(sql, order.getUserId(), order.getTotal(), order.getStatus(), order.getCreatedAt());
+
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
+            ps.setLong(1, order.getUserId());
+            ps.setBigDecimal(2, order.getTotal());
+            ps.setString(3, order.getStatus());
+            ps.setTimestamp(4, Timestamp.valueOf(order.getCreatedAt()));
+            return ps;
+        }, keyHolder);
+
+        if (keyHolder.getKey() != null) {
+            order.setId(keyHolder.getKey().longValue());
+        }
     }
 
     public void updateStatus(Long id, String status) {

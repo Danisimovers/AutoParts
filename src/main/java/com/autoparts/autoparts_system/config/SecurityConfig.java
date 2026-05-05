@@ -44,12 +44,13 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+                        .requestMatchers("/api/orders/**").authenticated()
+                        .requestMatchers("/api/returns/**").authenticated()
                         // Менеджер-панель (доступ для MANAGER и ADMIN)
                         .requestMatchers("/api/manager/**").hasAnyAuthority("MANAGER", "ADMIN")
                         // Админ-панель (только для ADMIN)
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         // Заказы (только для авторизованных)
-                        .requestMatchers("/api/orders/**").authenticated()
                         // Все остальные требуют авторизации
                         .anyRequest().authenticated()
                 )
