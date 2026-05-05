@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../api/api';
 
 function VinRequestChat() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
@@ -54,11 +56,26 @@ function VinRequestChat() {
         }
     };
 
+    // Проверка, является ли отправитель текущим пользователем (менеджером/админом)
+    const isCurrentUser = (msg) => {
+        return msg.senderId === user?.id;
+    };
+
+    // Получение имени отправителя для отображения
+    const getSenderName = (msg) => {
+        if (msg.senderRole === 'CUSTOMER') {
+            return `Пользователь ${msg.senderLogin || ''}`;
+        }
+        if (msg.senderRole === 'MANAGER') return 'Менеджер';
+        if (msg.senderRole === 'ADMIN') return 'Админ';
+        return msg.senderLogin || 'Неизвестный';
+    };
+
     if (loading) return <div style={{ padding: '20px' }}>Загрузка...</div>;
 
     return (
         <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-            <button onClick={() => navigate('/manager/vin-requests')} style={{ marginBottom: '20px' }}>
+            <button onClick={() => navigate('/manager/vin-requests')} style={{ marginBottom: '20px', cursor: 'pointer' }}>
                 ← Назад к заявкам
             </button>
 
@@ -79,25 +96,55 @@ function VinRequestChat() {
                     </div>
                 ) : (
                     messages.map(msg => {
-                        const isManager = msg.senderId !== null; // Упрощенно, нужно проверять по роли
+                        const currentUser = isCurrentUser(msg);
                         return (
                             <div
                                 key={msg.id}
                                 style={{
-                                    textAlign: isManager ? 'right' : 'left',
+                                    display: 'flex',
+                                    justifyContent: currentUser ? 'flex-end' : 'flex-start',
                                     marginBottom: '15px'
                                 }}
                             >
                                 <div style={{
-                                    display: 'inline-block',
                                     maxWidth: '70%',
+                                    backgroundColor: currentUser ? '#e67e22' : '#e0e0e0',
+                                    color: currentUser ? 'white' : '#333',
                                     padding: '10px 15px',
                                     borderRadius: '12px',
-                                    backgroundColor: isManager ? '#e67e22' : '#e0e0e0',
-                                    color: isManager ? 'white' : '#333'
+                                    borderBottomRightRadius: currentUser ? '4px' : '12px',
+                                    borderBottomLeftRadius: currentUser ? '12px' : '4px'
                                 }}>
-                                    <div style={{ fontSize: '14px' }}>{msg.message}</div>
-                                    <div style={{ fontSize: '10px', marginTop: '5px', opacity: 0.7 }}>
+                                    {!currentUser && (
+                                        <div style={{
+                                            fontSize: '11px',
+                                            fontWeight: 'bold',
+                                            color: '#666',
+                                            marginBottom: '4px'
+                                        }}>
+                                            {getSenderName(msg)}
+                                        </div>
+                                    )}
+                                    {currentUser && (
+                                        <div style={{
+                                            fontSize: '11px',
+                                            fontWeight: 'bold',
+                                            color: 'rgba(255,255,255,0.8)',
+                                            marginBottom: '4px',
+                                            textAlign: 'right'
+                                        }}>
+                                            Я
+                                        </div>
+                                    )}
+                                    <div style={{ fontSize: '14px', wordBreak: 'break-word' }}>
+                                        {msg.message}
+                                    </div>
+                                    <div style={{
+                                        fontSize: '10px',
+                                        marginTop: '5px',
+                                        opacity: 0.7,
+                                        textAlign: currentUser ? 'right' : 'left'
+                                    }}>
                                         {new Date(msg.createdAt).toLocaleString()}
                                     </div>
                                 </div>
@@ -119,7 +166,8 @@ function VinRequestChat() {
                         padding: '10px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
-                        resize: 'vertical'
+                        resize: 'vertical',
+                        fontFamily: 'inherit'
                     }}
                 />
                 <button
