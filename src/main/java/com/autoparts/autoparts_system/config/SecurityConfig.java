@@ -44,6 +44,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+                        .requestMatchers("/api/external-requests/**").authenticated()
                         .requestMatchers("/api/orders/**").authenticated()
                         .requestMatchers("/api/returns/**").authenticated()
                         // Менеджер-панель (доступ для MANAGER и ADMIN)

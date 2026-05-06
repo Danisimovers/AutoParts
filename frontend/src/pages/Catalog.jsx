@@ -109,7 +109,7 @@ function Catalog() {
 
     const requestExternalProduct = async (product) => {
         try {
-            const response = await api.post('/manager/external-requests', {
+            const response = await api.post('/external-requests', {
                 productName: product.name,
                 factoryNumber: product.factoryNumber,
                 producer: product.producer,
