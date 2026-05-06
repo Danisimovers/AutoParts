@@ -89,7 +89,6 @@ function Catalog() {
             setLoading(false);
         }
 
-        // Поиск у поставщиков
         searchExternal(searchQuery);
     };
 
@@ -108,8 +107,24 @@ function Catalog() {
         }
     };
 
-    const requestExternalProduct = (product) => {
-        alert(`Запрос на товар "${product.name}" отправлен менеджеру. Мы свяжемся с вами.`);
+    const requestExternalProduct = async (product) => {
+        try {
+            const response = await api.post('/manager/external-requests', {
+                productName: product.name,
+                factoryNumber: product.factoryNumber,
+                producer: product.producer,
+                supplierName: product.supplierName,
+                price: product.price
+            });
+            if (response.data.success) {
+                alert('Запрос отправлен менеджеру. Мы свяжемся с вами.');
+            } else {
+                alert(response.data.message);
+            }
+        } catch (error) {
+            console.error('Ошибка отправки запроса:', error);
+            alert('Ошибка отправки запроса');
+        }
     };
 
     const goToPage = (page) => {
@@ -150,7 +165,6 @@ function Catalog() {
                 </button>
             </div>
 
-            {/* Свои товары */}
             {loading ? (
                 <p>Загрузка...</p>
             ) : products.length === 0 ? (
@@ -167,7 +181,6 @@ function Catalog() {
                         ))}
                     </div>
 
-                    {/* Пагинация */}
                     {totalPages > 1 && (
                         <div className="flex justify-center gap-3 mt-8 pt-5">
                             <button
@@ -192,7 +205,6 @@ function Catalog() {
                 </>
             )}
 
-            {/* Товары поставщиков */}
             {(externalProducts.length > 0 || loadingExternal) && (
                 <div className="mt-8 border-t pt-6">
                     <h2 className="text-xl font-bold mb-4 text-blue-600">Товары от поставщиков (под заказ)</h2>
