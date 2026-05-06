@@ -6,7 +6,8 @@ function AdminSidebar() {
         { path: '/admin/products', name: 'Товары' },
         { path: '/admin/users', name: 'Пользователи' },
         { path: '/admin/stock', name: 'Остатки' },
-        { path: '/admin/returns', name: 'Возвраты' }
+        { path: '/admin/returns', name: 'Возвраты' },
+        { path: '/admin/suppliers', name: 'Поставщики' },
     ];
 
     return (
