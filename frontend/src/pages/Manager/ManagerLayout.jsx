@@ -6,6 +6,7 @@ function ManagerLayout() {
         { path: '/manager/vin-requests', name: 'Заявки по VIN' },
         { path: '/manager/orders', name: 'Заказы' },
         { path: '/manager/returns', name: 'Возвраты' },
+        { path: '/manager/external-requests', name: 'Запросы поставщикам' },
     ];
 
     return (

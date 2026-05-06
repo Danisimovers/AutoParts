@@ -33,6 +33,8 @@ import VinRequests from './pages/Manager/VinRequests';
 import VinRequestChat from './pages/Manager/VinRequestChat';
 import ManagerOrders from './pages/Manager/ManagerOrders';
 import ManagerReturns from './pages/Manager/ManagerReturns';
+import ManagerExternalRequests from './pages/Manager/ManagerExternalRequests';
+
 
 
 function NavBar({ showVinForm, setShowVinForm }) {
@@ -246,6 +248,7 @@ function AppRoutes() {
                 <Route path="vin-requests/:id" element={<VinRequestChat />} />
                 <Route path="orders" element={<ManagerOrders />} />
                 <Route path="returns" element={<ManagerReturns />} />
+                <Route path="external-requests" element={<ManagerExternalRequests />} />
             </Route>
         </Routes>
     );

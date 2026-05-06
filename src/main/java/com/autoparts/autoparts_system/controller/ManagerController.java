@@ -172,4 +172,10 @@ public class ManagerController {
             return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/external-requests")
+    public ResponseEntity<ApiResponse> getExternalRequests() {
+        List<ExternalRequest> requests = externalRequestRepository.findAll();
+        return ResponseEntity.ok(ApiResponse.success("Запросы загружены", requests));
+    }
 }
