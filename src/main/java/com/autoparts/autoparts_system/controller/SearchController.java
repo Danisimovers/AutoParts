@@ -3,17 +3,15 @@ package com.autoparts.autoparts_system.controller;
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.dto.response.ProductDTO;
 import com.autoparts.autoparts_system.dto.response.SearchResultDTO;
+import com.autoparts.autoparts_system.model.ExternalProduct;
 import com.autoparts.autoparts_system.model.Product;
 import com.autoparts.autoparts_system.model.Vehicle;
-import com.autoparts.autoparts_system.service.CategoryService;
-import com.autoparts.autoparts_system.service.ManufacturerService;
-import com.autoparts.autoparts_system.service.SearchService;
-import com.autoparts.autoparts_system.service.StockService;
-import com.autoparts.autoparts_system.service.VehicleService;
+import com.autoparts.autoparts_system.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +34,9 @@ public class SearchController {
 
     @Autowired
     private StockService stockService;
+
+    @Autowired
+    private ExternalSupplierService externalSupplierService;
 
     @GetMapping
     public ResponseEntity<ApiResponse> search(
@@ -66,6 +67,16 @@ public class SearchController {
         }
 
         return ResponseEntity.ok(ApiResponse.success("Поиск выполнен", result));
+    }
+
+    @GetMapping("/external")
+    public ResponseEntity<ApiResponse> searchExternal(@RequestParam(required = false) String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.success("Поставщики", new ArrayList<>()));
+        }
+
+        List<ExternalProduct> externalProducts = externalSupplierService.searchAllSuppliers(query);
+        return ResponseEntity.ok(ApiResponse.success("Товары от поставщиков", externalProducts));
     }
 
     private ProductDTO convertToDTO(Product product) {
