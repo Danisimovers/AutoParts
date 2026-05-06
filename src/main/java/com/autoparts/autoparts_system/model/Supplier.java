@@ -14,4 +14,6 @@ public class Supplier {
     private String email;
     private String phone;
     private String address;
+    private String apiUrl;
+    private String apiKey;
 }

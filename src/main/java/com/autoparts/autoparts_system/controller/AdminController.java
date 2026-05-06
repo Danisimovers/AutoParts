@@ -5,12 +5,15 @@ import com.autoparts.autoparts_system.dto.request.UpdateProductRequest;
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.dto.response.ProductDTO;
 import com.autoparts.autoparts_system.model.Product;
+import com.autoparts.autoparts_system.model.Supplier;
 import com.autoparts.autoparts_system.model.User;
 import com.autoparts.autoparts_system.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.autoparts.autoparts_system.service.SupplierService;
+
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,6 +37,9 @@ public class AdminController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private SupplierService supplierService;
 
 
 
@@ -120,6 +126,43 @@ public class AdminController {
         try {
             userService.changeUserRole(id, role);
             return ResponseEntity.ok(ApiResponse.success("Роль пользователя изменена", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+
+    @GetMapping("/suppliers")
+    public ResponseEntity<ApiResponse> getAllSuppliers() {
+        List<Supplier> suppliers = supplierService.getAllSuppliers();
+        return ResponseEntity.ok(ApiResponse.success("Поставщики загружены", suppliers));
+    }
+
+    @PostMapping("/suppliers")
+    public ResponseEntity<ApiResponse> createSupplier(@RequestBody Supplier supplier) {
+        try {
+            Supplier created = supplierService.createSupplier(supplier);
+            return ResponseEntity.ok(ApiResponse.success("Поставщик создан", created));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/suppliers/{id}")
+    public ResponseEntity<ApiResponse> updateSupplier(@PathVariable Long id, @RequestBody Supplier supplier) {
+        try {
+            Supplier updated = supplierService.updateSupplier(id, supplier);
+            return ResponseEntity.ok(ApiResponse.success("Поставщик обновлен", updated));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/suppliers/{id}")
+    public ResponseEntity<ApiResponse> deleteSupplier(@PathVariable Long id) {
+        try {
+            supplierService.deleteSupplier(id);
+            return ResponseEntity.ok(ApiResponse.success("Поставщик удален", null));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }

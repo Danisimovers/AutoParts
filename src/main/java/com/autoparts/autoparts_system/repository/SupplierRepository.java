@@ -20,19 +20,38 @@ public class SupplierRepository {
 
     public Supplier findById(Long id) {
         String sql = "SELECT * FROM suppliers WHERE id = ?";
-        return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(Supplier.class), id);
+        try {
+            return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(Supplier.class), id);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public void save(Supplier supplier) {
-        String sql = "INSERT INTO suppliers (name, contact, email, phone, address) VALUES (?, ?, ?, ?, ?)";
-        jdbcTemplate.update(sql, supplier.getName(), supplier.getContact(),
-                supplier.getEmail(), supplier.getPhone(), supplier.getAddress());
+        String sql = "INSERT INTO suppliers (name, contact, email, phone, address, api_url, api_key) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        jdbcTemplate.update(sql,
+                supplier.getName(),
+                supplier.getContact(),
+                supplier.getEmail(),
+                supplier.getPhone(),
+                supplier.getAddress(),
+                supplier.getApiUrl(),
+                supplier.getApiKey()
+        );
     }
 
     public void update(Supplier supplier) {
-        String sql = "UPDATE suppliers SET name = ?, contact = ?, email = ?, phone = ?, address = ? WHERE id = ?";
-        jdbcTemplate.update(sql, supplier.getName(), supplier.getContact(),
-                supplier.getEmail(), supplier.getPhone(), supplier.getAddress(), supplier.getId());
+        String sql = "UPDATE suppliers SET name = ?, contact = ?, email = ?, phone = ?, address = ?, api_url = ?, api_key = ? WHERE id = ?";
+        jdbcTemplate.update(sql,
+                supplier.getName(),
+                supplier.getContact(),
+                supplier.getEmail(),
+                supplier.getPhone(),
+                supplier.getAddress(),
+                supplier.getApiUrl(),
+                supplier.getApiKey(),
+                supplier.getId()
+        );
     }
 
     public void deleteById(Long id) {
