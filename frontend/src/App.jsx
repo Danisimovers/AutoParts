@@ -26,6 +26,8 @@ import AdminStock from './pages/Admin/AdminStock';
 import AdminSuppliers from './pages/Admin/AdminSuppliers';
 import AdminCategories from './pages/Admin/AdminCategories';
 import AdminManufacturers from './pages/Admin/AdminManufacturers';
+import AdminReports from './pages/Admin/AdminReports';
+
 
 
 
@@ -246,6 +248,7 @@ function AppRoutes() {
                 <Route path="suppliers" element={<AdminSuppliers />} />
                 <Route path="categories" element={<AdminCategories />} />
                 <Route path="manufacturers" element={<AdminManufacturers />} />
+                <Route path="reports" element={<AdminReports />} />
             </Route>
 
             {/* Менеджер-панель (доступна для MANAGER и ADMIN) */}
