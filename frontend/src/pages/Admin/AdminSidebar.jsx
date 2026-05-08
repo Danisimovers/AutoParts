@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 function AdminSidebar() {
     const menuItems = [
         { path: '/admin/products', name: 'Товары' },
+        { path: '/admin/categories', name: 'Категории' },
         { path: '/admin/users', name: 'Пользователи' },
         { path: '/admin/stock', name: 'Остатки' },
         { path: '/admin/returns', name: 'Возвраты' },
