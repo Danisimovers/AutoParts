@@ -347,6 +347,7 @@ public class AdminController {
             jdbcTemplate.update(updateSql, id);
 
             Long userId = ((Number) request.get("user_id")).longValue();
+
             String insertNotifSql = "INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES (?, ?, ?, ?, ?, ?)";
             jdbcTemplate.update(insertNotifSql, userId, "EXTERNAL_REQUEST_STATUS",
                     "Товар поступил на склад",
@@ -355,6 +356,7 @@ public class AdminController {
 
             return ResponseEntity.ok(ApiResponse.success("Товар добавлен на склад", Map.of("productId", productId)));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
         }
     }
