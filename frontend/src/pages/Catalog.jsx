@@ -11,7 +11,6 @@ function Catalog() {
     const [vehicles, setVehicles] = useState([]);
     const [selectedVehicle, setSelectedVehicle] = useState('');
 
-    // Пагинация
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalItems, setTotalItems] = useState(0);
@@ -107,23 +106,23 @@ function Catalog() {
         }
     };
 
-    const requestExternalProduct = async (product) => {
+    const addExternalToCart = async (product) => {
+        // Для товара поставщика создаем специальный запрос в корзину
         try {
-            const response = await api.post('/external-requests', {
+            const response = await api.post('/cart/add-external', {
                 productName: product.name,
                 factoryNumber: product.factoryNumber,
                 producer: product.producer,
                 supplierName: product.supplierName,
-                price: product.price
+                price: product.price,
+                quantity: 1
             });
             if (response.data.success) {
-                alert('Запрос отправлен менеджеру. Мы свяжемся с вами.');
-            } else {
-                alert(response.data.message);
+                alert(`${product.name} добавлен в корзину (товар поставщика)`);
             }
         } catch (error) {
-            console.error('Ошибка отправки запроса:', error);
-            alert('Ошибка отправки запроса');
+            console.error('Ошибка добавления в корзину:', error);
+            alert('Ошибка добавления в корзину');
         }
     };
 
@@ -230,10 +229,10 @@ function Catalog() {
                                                 <p className="text-xl font-bold text-orange-500">{product.price} ₽</p>
                                                 <p className="text-xs text-gray-500">Срок: {product.delivery}</p>
                                                 <button
-                                                    onClick={() => requestExternalProduct(product)}
+                                                    onClick={() => addExternalToCart(product)}
                                                     className="mt-2 bg-orange-500 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-orange-600 transition"
                                                 >
-                                                    Запросить
+                                                    В корзину
                                                 </button>
                                             </div>
                                         </div>
