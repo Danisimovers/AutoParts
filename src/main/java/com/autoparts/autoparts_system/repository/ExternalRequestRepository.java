@@ -24,7 +24,7 @@ public class ExternalRequestRepository {
                 request.getProducer(),
                 request.getSupplierName(),
                 request.getPrice(),
-                "PENDING",
+                request.getStatus() != null ? request.getStatus() : "PENDING",
                 LocalDateTime.now()
         );
     }
@@ -32,5 +32,24 @@ public class ExternalRequestRepository {
     public List<ExternalRequest> findAll() {
         String sql = "SELECT * FROM external_requests ORDER BY created_at DESC";
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(ExternalRequest.class));
+    }
+
+    public List<ExternalRequest> findByUserId(Long userId) {
+        String sql = "SELECT * FROM external_requests WHERE user_id = ? ORDER BY created_at DESC";
+        return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(ExternalRequest.class), userId);
+    }
+
+    public ExternalRequest findById(Long id) {
+        String sql = "SELECT * FROM external_requests WHERE id = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(ExternalRequest.class), id);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void updateStatus(Long id, String status) {
+        String sql = "UPDATE external_requests SET status = ? WHERE id = ?";
+        jdbcTemplate.update(sql, status, id);
     }
 }

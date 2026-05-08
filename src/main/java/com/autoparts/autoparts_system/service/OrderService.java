@@ -1,8 +1,10 @@
 package com.autoparts.autoparts_system.service;
 
+import com.autoparts.autoparts_system.model.ExternalRequest;
 import com.autoparts.autoparts_system.model.OrderItem;
 import com.autoparts.autoparts_system.model.Product;
 import com.autoparts.autoparts_system.model.SalesOrder;
+import com.autoparts.autoparts_system.repository.ExternalRequestRepository;
 import com.autoparts.autoparts_system.repository.OrderItemRepository;
 import com.autoparts.autoparts_system.repository.SalesOrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +35,9 @@ public class OrderService {
     @Autowired
     private CartService cartService;
 
+    @Autowired
+    private ExternalRequestRepository externalRequestRepository;
+
     @Transactional
     public SalesOrder createOrder(Long userId) {
         System.out.println("=== CREATE ORDER ===");
@@ -46,8 +52,8 @@ public class OrderService {
         }
 
         // Отделяем обычные товары от товаров поставщиков
-        Map<Long, Integer> regularItems = new java.util.HashMap<>();
-        Map<String, CartService.CartItem> externalItems = new java.util.HashMap<>();
+        Map<Long, Integer> regularItems = new HashMap<>();
+        Map<String, CartService.CartItem> externalItems = new HashMap<>();
 
         for (Map.Entry<String, CartService.CartItem> entry : cart.entrySet()) {
             CartService.CartItem item = entry.getValue();
@@ -116,7 +122,7 @@ public class OrderService {
             stockService.removeStock(productId, quantity);
         }
 
-        // Сохраняем позиции товаров поставщиков (с пометкой, что это external)
+        // Сохраняем позиции товаров поставщиков и создаем external_requests
         for (Map.Entry<String, CartService.CartItem> entry : externalItems.entrySet()) {
             CartService.CartItem item = entry.getValue();
 
@@ -128,6 +134,18 @@ public class OrderService {
             orderItemRepository.save(orderItem);
 
             System.out.println("External OrderItem saved: " + item.getProductName() + ", quantity=" + item.getQuantity());
+
+            // Создаем запись в external_requests
+            ExternalRequest extRequest = new ExternalRequest();
+            extRequest.setUserId(userId);
+            extRequest.setProductName(item.getProductName());
+            extRequest.setFactoryNumber(item.getFactoryNumber());
+            extRequest.setProducer(item.getProducer());
+            extRequest.setSupplierName(item.getSupplierName());
+            extRequest.setPrice(item.getPrice().doubleValue());
+            extRequest.setStatus("PENDING");
+            externalRequestRepository.save(extRequest);
+            System.out.println("ExternalRequest created for: " + item.getProductName());
         }
 
         // Очищаем корзину
