@@ -18,8 +18,19 @@ function ManagerExternalRequests() {
             }
         } catch (error) {
             console.error('Ошибка загрузки запросов:', error);
+            alert('Ошибка загрузки запросов');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const updateStatus = async (id, status) => {
+        try {
+            await api.put(`/manager/external-requests/${id}/status?status=${status}`);
+            alert('Статус обновлен');
+            loadRequests();
+        } catch (error) {
+            alert('Ошибка обновления статуса');
         }
     };
 
@@ -27,6 +38,7 @@ function ManagerExternalRequests() {
         switch(status) {
             case 'PENDING': return 'bg-yellow-500';
             case 'PROCESSING': return 'bg-blue-500';
+            case 'ORDERED': return 'bg-purple-500';
             case 'COMPLETED': return 'bg-green-500';
             case 'REJECTED': return 'bg-red-500';
             default: return 'bg-gray-500';
@@ -37,6 +49,7 @@ function ManagerExternalRequests() {
         switch(status) {
             case 'PENDING': return 'Ожидает';
             case 'PROCESSING': return 'В обработке';
+            case 'ORDERED': return 'Заказан';
             case 'COMPLETED': return 'Выполнен';
             case 'REJECTED': return 'Отклонен';
             default: return status;
@@ -57,21 +70,19 @@ function ManagerExternalRequests() {
                         <thead className="bg-gray-100">
                         <tr>
                             <th className="p-2 text-left">ID</th>
-                            <th className="p-2 text-left">ID пользователя</th>
                             <th className="p-2 text-left">Товар</th>
                             <th className="p-2 text-left">Артикул</th>
                             <th className="p-2 text-left">Производитель</th>
                             <th className="p-2 text-left">Поставщик</th>
                             <th className="p-2 text-center">Цена</th>
                             <th className="p-2 text-center">Статус</th>
-                            <th className="p-2 text-center">Дата</th>
+                            <th className="p-2 text-center">Действие</th>
                         </tr>
                         </thead>
                         <tbody>
                         {requests.map(req => (
                             <tr key={req.id} className="border-b">
                                 <td className="p-2">{req.id}</td>
-                                <td className="p-2">{req.userId}</td>
                                 <td className="p-2">{req.productName}</td>
                                 <td className="p-2">{req.factoryNumber}</td>
                                 <td className="p-2">{req.producer || '-'}</td>
@@ -83,7 +94,17 @@ function ManagerExternalRequests() {
                                         </span>
                                 </td>
                                 <td className="p-2 text-center">
-                                    {new Date(req.createdAt).toLocaleDateString()}
+                                    <select
+                                        onChange={(e) => updateStatus(req.id, e.target.value)}
+                                        defaultValue={req.status}
+                                        className="p-1 border rounded"
+                                    >
+                                        <option value="PENDING">Ожидает</option>
+                                        <option value="PROCESSING">В обработке</option>
+                                        <option value="ORDERED">Заказан</option>
+                                        <option value="COMPLETED">Выполнен</option>
+                                        <option value="REJECTED">Отклонен</option>
+                                    </select>
                                 </td>
                             </tr>
                         ))}
