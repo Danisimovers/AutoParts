@@ -2,6 +2,7 @@ package com.autoparts.autoparts_system.repository;
 
 import com.autoparts.autoparts_system.model.Inventory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -20,7 +21,11 @@ public class InventoryRepository {
 
     public Inventory findByProductId(Long productId) {
         String sql = "SELECT * FROM inventory WHERE product_id = ?";
-        return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(Inventory.class), productId);
+        try {
+            return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(Inventory.class), productId);
+        } catch (EmptyResultDataAccessException e) {
+            return null;
+        }
     }
 
     public void save(Inventory inventory) {

@@ -1,5 +1,7 @@
 package com.autoparts.autoparts_system.service;
 
+import com.autoparts.autoparts_system.model.Inventory;
+import com.autoparts.autoparts_system.repository.InventoryRepository;
 import com.autoparts.autoparts_system.model.Product;
 import com.autoparts.autoparts_system.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +13,9 @@ public class ProductService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private InventoryRepository inventoryRepository;
 
     public List<Product> getAllProducts() {
         return productRepository.findAll();
@@ -28,6 +33,13 @@ public class ProductService {
             throw new IllegalArgumentException("Цена должна быть больше 0");
         }
         productRepository.save(product);
+
+        // Автоматически создаем запись об остатках
+        Inventory inventory = new Inventory();
+        inventory.setProductId(product.getId());
+        inventory.setQuantity(0);
+        inventory.setWarehouseId("MAIN");
+        inventoryRepository.save(inventory);
         return product;
     }
 
