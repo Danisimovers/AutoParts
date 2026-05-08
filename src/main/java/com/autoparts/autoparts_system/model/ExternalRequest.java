@@ -15,6 +15,7 @@ public class ExternalRequest {
     private String factoryNumber;
     private String producer;
     private String supplierName;
+    private Long supplierId;
     private Double price;
     private String status;
     private LocalDateTime createdAt;
