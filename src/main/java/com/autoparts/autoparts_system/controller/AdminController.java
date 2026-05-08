@@ -4,6 +4,7 @@ import com.autoparts.autoparts_system.dto.request.CreateProductRequest;
 import com.autoparts.autoparts_system.dto.request.UpdateProductRequest;
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.dto.response.ProductDTO;
+import com.autoparts.autoparts_system.model.Category;
 import com.autoparts.autoparts_system.model.Product;
 import com.autoparts.autoparts_system.model.Supplier;
 import com.autoparts.autoparts_system.model.User;
@@ -163,6 +164,43 @@ public class AdminController {
         try {
             supplierService.deleteSupplier(id);
             return ResponseEntity.ok(ApiResponse.success("Поставщик удален", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+
+    @GetMapping("/categories")
+    public ResponseEntity<ApiResponse> getAllCategories() {
+        List<Category> categories = categoryService.getAllCategories();
+        return ResponseEntity.ok(ApiResponse.success("Категории загружены", categories));
+    }
+
+    @PostMapping("/categories")
+    public ResponseEntity<ApiResponse> createCategory(@RequestBody Category category) {
+        try {
+            Category created = categoryService.createCategory(category);
+            return ResponseEntity.ok(ApiResponse.success("Категория создана", created));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/categories/{id}")
+    public ResponseEntity<ApiResponse> updateCategory(@PathVariable Long id, @RequestBody Category category) {
+        try {
+            Category updated = categoryService.updateCategory(id, category);
+            return ResponseEntity.ok(ApiResponse.success("Категория обновлена", updated));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/categories/{id}")
+    public ResponseEntity<ApiResponse> deleteCategory(@PathVariable Long id) {
+        try {
+            categoryService.deleteCategory(id);
+            return ResponseEntity.ok(ApiResponse.success("Категория удалена", null));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
