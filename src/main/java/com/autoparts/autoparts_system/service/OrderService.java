@@ -8,6 +8,7 @@ import com.autoparts.autoparts_system.repository.ExternalRequestRepository;
 import com.autoparts.autoparts_system.repository.OrderItemRepository;
 import com.autoparts.autoparts_system.repository.SalesOrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,9 @@ public class OrderService {
 
     @Autowired
     private ExternalRequestRepository externalRequestRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Transactional
     public SalesOrder createOrder(Long userId) {
@@ -122,30 +126,45 @@ public class OrderService {
             stockService.removeStock(productId, quantity);
         }
 
-        // Сохраняем позиции товаров поставщиков и создаем external_requests
+        // Сохраняем позиции товаров поставщиков и создаем external_requests с order_id и supplier_id
         for (Map.Entry<String, CartService.CartItem> entry : externalItems.entrySet()) {
             CartService.CartItem item = entry.getValue();
 
             OrderItem orderItem = new OrderItem();
             orderItem.setOrderId(order.getId());
-            orderItem.setProductId(null); // Нет ID в нашей системе
+            orderItem.setProductId(null);
             orderItem.setQuantity(item.getQuantity());
             orderItem.setPrice(item.getPrice());
             orderItemRepository.save(orderItem);
 
             System.out.println("External OrderItem saved: " + item.getProductName() + ", quantity=" + item.getQuantity());
 
-            // Создаем запись в external_requests
+            // Получаем supplier_id по имени поставщика
+            String supplierName = item.getSupplierName();
+            String findSupplierSql = "SELECT id FROM suppliers WHERE name = ?";
+            Long supplierId = null;
+            try {
+                supplierId = jdbcTemplate.queryForObject(findSupplierSql, Long.class, supplierName);
+            } catch (Exception e) {
+                System.out.println("Supplier not found, creating new: " + supplierName);
+                String insertSupplierSql = "INSERT INTO suppliers (name) VALUES (?)";
+                jdbcTemplate.update(insertSupplierSql, supplierName);
+                supplierId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
+            }
+
+            // Создаем запись в external_requests с привязкой к заказу
             ExternalRequest extRequest = new ExternalRequest();
             extRequest.setUserId(userId);
+            extRequest.setOrderId(order.getId());
             extRequest.setProductName(item.getProductName());
             extRequest.setFactoryNumber(item.getFactoryNumber());
             extRequest.setProducer(item.getProducer());
-            extRequest.setSupplierName(item.getSupplierName());
+            extRequest.setSupplierName(supplierName);
+            extRequest.setSupplierId(supplierId);
             extRequest.setPrice(item.getPrice().doubleValue());
             extRequest.setStatus("PENDING");
             externalRequestRepository.save(extRequest);
-            System.out.println("ExternalRequest created for: " + item.getProductName());
+            System.out.println("ExternalRequest created for: " + item.getProductName() + " with orderId=" + order.getId() + ", supplierId=" + supplierId);
         }
 
         // Очищаем корзину

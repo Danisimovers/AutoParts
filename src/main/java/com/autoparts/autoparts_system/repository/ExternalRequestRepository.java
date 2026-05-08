@@ -16,13 +16,15 @@ public class ExternalRequestRepository {
     private JdbcTemplate jdbcTemplate;
 
     public void save(ExternalRequest request) {
-        String sql = "INSERT INTO external_requests (user_id, product_name, factory_number, producer, supplier_name, price, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO external_requests (user_id, order_id, product_name, factory_number, producer, supplier_name, supplier_id, price, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         jdbcTemplate.update(sql,
                 request.getUserId(),
+                request.getOrderId(),
                 request.getProductName(),
                 request.getFactoryNumber(),
                 request.getProducer(),
                 request.getSupplierName(),
+                request.getSupplierId(),
                 request.getPrice(),
                 request.getStatus() != null ? request.getStatus() : "PENDING",
                 LocalDateTime.now()

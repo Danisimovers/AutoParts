@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class ExternalRequest {
     private Long id;
     private Long userId;
+    private Long orderId;
     private String productName;
     private String factoryNumber;
     private String producer;

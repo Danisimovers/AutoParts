@@ -248,8 +248,38 @@ public class AdminController {
     @PutMapping("/external-requests/{id}/status")
     public ResponseEntity<ApiResponse> updateExternalRequestStatus(@PathVariable Long id, @RequestParam String status) {
         try {
+            // Получаем order_id перед обновлением статуса
+            String selectOrderSql = "SELECT order_id FROM external_requests WHERE id = ?";
+            Long orderId = null;
+            try {
+                orderId = jdbcTemplate.queryForObject(selectOrderSql, Long.class, id);
+            } catch (Exception e) {
+                // Может не быть order_id у старых записей
+            }
+
             String sql = "UPDATE external_requests SET status = ? WHERE id = ?";
             jdbcTemplate.update(sql, status, id);
+
+            // Синхронизируем статус заказа
+            if (orderId != null) {
+                String orderStatus = null;
+                switch (status) {
+                    case "ORDERED":
+                        orderStatus = "PENDING_SUPPLIER";
+                        break;
+                    case "COMPLETED":
+                        orderStatus = "DELIVERED";
+                        break;
+                    case "REJECTED":
+                        orderStatus = "CANCELLED";
+                        break;
+                }
+                if (orderStatus != null) {
+                    String updateOrderSql = "UPDATE sales_orders SET status = ? WHERE id = ?";
+                    jdbcTemplate.update(updateOrderSql, orderStatus, orderId);
+                    System.out.println("Order " + orderId + " status updated to: " + orderStatus);
+                }
+            }
 
             String selectSql = "SELECT user_id FROM external_requests WHERE id = ?";
             Long userId = jdbcTemplate.queryForObject(selectSql, Long.class, id);
@@ -294,8 +324,19 @@ public class AdminController {
                     "ORDERED",
                     request.get("price"));
 
+            // Обновляем статус external_request и синхронизируем заказ
             String updateSql = "UPDATE external_requests SET status = 'ORDERED' WHERE id = ?";
             jdbcTemplate.update(updateSql, id);
+
+            Object orderIdObj = request.get("order_id");
+            System.out.println("order_id from DB: " + orderIdObj);
+            Long orderId = null;
+            if (orderIdObj != null) {
+                orderId = ((Number) orderIdObj).longValue();
+                String updateOrderSql = "UPDATE sales_orders SET status = 'PENDING_SUPPLIER' WHERE id = ?";
+                jdbcTemplate.update(updateOrderSql, orderId);
+                System.out.println("Order status updated for orderId: " + orderId);
+            }
 
             Long userId = ((Number) request.get("user_id")).longValue();
 
@@ -334,7 +375,6 @@ public class AdminController {
             System.out.println("Factory number: " + factoryNumber);
             System.out.println("Producer: " + producerName);
 
-            // Получаем или создаем категорию по умолчанию
             Long defaultCategoryId;
             String checkCategorySql = "SELECT id FROM categories WHERE name = 'Без категории'";
             try {
@@ -345,7 +385,6 @@ public class AdminController {
                 defaultCategoryId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
             }
 
-            // Получаем или создаем производителя из запроса
             Long manufacturerId;
             String checkManufacturerSql = "SELECT id FROM manufacturers WHERE name = ?";
             try {
@@ -375,22 +414,30 @@ public class AdminController {
                 System.out.println("New product created with ID: " + productId);
             }
 
-            // Добавляем остатки (пока 1 шт, заглушка)
             String checkInventorySql = "SELECT id FROM inventory WHERE product_id = ?";
             try {
                 jdbcTemplate.queryForObject(checkInventorySql, Long.class, productId);
-                // Если есть — увеличиваем на 1
                 String updateInventorySql = "UPDATE inventory SET quantity = quantity + 1 WHERE product_id = ?";
                 jdbcTemplate.update(updateInventorySql, productId);
             } catch (Exception e) {
-                // Если нет — создаем с количеством 1
                 String insertInventorySql = "INSERT INTO inventory (product_id, quantity, warehouse_id) VALUES (?, ?, ?)";
                 jdbcTemplate.update(insertInventorySql, productId, 1, "MAIN");
             }
 
             String updateSql = "UPDATE external_requests SET status = 'COMPLETED' WHERE id = ?";
             jdbcTemplate.update(updateSql, id);
-            System.out.println("Status updated to COMPLETED");
+
+            // Обновляем статус заказа на DELIVERED
+            Object orderIdObj = request.get("order_id");
+            Long orderId = null;
+            if (orderIdObj != null) {
+                orderId = ((Number) orderIdObj).longValue();
+            }
+            if (orderId != null) {
+                String updateOrderSql = "UPDATE sales_orders SET status = 'DELIVERED' WHERE id = ?";
+                jdbcTemplate.update(updateOrderSql, orderId);
+                System.out.println("Order " + orderId + " status updated to DELIVERED");
+            }
 
             Long userId = ((Number) request.get("user_id")).longValue();
             System.out.println("User ID: " + userId);
