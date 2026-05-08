@@ -9,6 +9,7 @@ function AdminSidebar() {
         { path: '/admin/users', name: 'Пользователи' },
         { path: '/admin/stock', name: 'Остатки' },
         { path: '/admin/suppliers', name: 'Поставщики' },
+        { path: '/admin/external-requests', name: 'Запросы поставщикам' },
         { path: '/admin/reports', name: 'Отчеты' },
     ];
 
