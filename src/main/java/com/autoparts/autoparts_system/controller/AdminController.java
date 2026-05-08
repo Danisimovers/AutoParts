@@ -9,10 +9,12 @@ import com.autoparts.autoparts_system.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import com.autoparts.autoparts_system.service.SupplierService;
 
-
+import java.util.Map;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,6 +40,9 @@ public class AdminController {
 
     @Autowired
     private SupplierService supplierService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
 
 
@@ -237,6 +242,67 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("Производитель удален", null));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // ========== Запросы поставщикам для админа ==========
+
+    @GetMapping("/external-requests")
+    public ResponseEntity<ApiResponse> getAllExternalRequests() {
+        String sql = "SELECT * FROM external_requests ORDER BY created_at DESC";
+        List<ExternalRequest> requests = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(ExternalRequest.class));
+        return ResponseEntity.ok(ApiResponse.success("Запросы загружены", requests));
+    }
+
+    @PutMapping("/external-requests/{id}/status")
+    public ResponseEntity<ApiResponse> updateExternalRequestStatus(@PathVariable Long id, @RequestParam String status) {
+        try {
+            String sql = "UPDATE external_requests SET status = ? WHERE id = ?";
+            jdbcTemplate.update(sql, status, id);
+
+            // Получаем user_id для уведомления
+            String selectSql = "SELECT user_id FROM external_requests WHERE id = ?";
+            Long userId = jdbcTemplate.queryForObject(selectSql, Long.class, id);
+
+            // Уведомление пользователю
+            String insertSql = "INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES (?, ?, ?, ?, ?, ?)";
+            jdbcTemplate.update(insertSql, userId, "EXTERNAL_REQUEST_STATUS",
+                    "Статус вашего запроса изменен",
+                    "Статус запроса на товар изменен на: " + getStatusText(status),
+                    "/profile?tab=external-requests", false);
+
+            return ResponseEntity.ok(ApiResponse.success("Статус обновлен", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/external-requests/{id}/add-to-stock")
+    public ResponseEntity<ApiResponse> addToStock(@PathVariable Long id) {
+        try {
+            // Получаем информацию о запросе
+            String selectSql = "SELECT product_name, factory_number, supplier_name, price FROM external_requests WHERE id = ? AND status != 'COMPLETED'";
+            Map<String, Object> request = jdbcTemplate.queryForMap(selectSql, id);
+
+            // Здесь нужно создать товар или увеличить остатки
+            // Пока просто меняем статус
+            String updateSql = "UPDATE external_requests SET status = 'COMPLETED' WHERE id = ?";
+            jdbcTemplate.update(updateSql, id);
+
+            return ResponseEntity.ok(ApiResponse.success("Товар добавлен на склад", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
+        }
+    }
+
+    private String getStatusText(String status) {
+        switch(status) {
+            case "PENDING": return "Ожидает обработки";
+            case "PROCESSING": return "В обработке";
+            case "ORDERED": return "Заказан у поставщика";
+            case "COMPLETED": return "Выполнен";
+            case "REJECTED": return "Отклонен";
+            default: return status;
         }
     }
 

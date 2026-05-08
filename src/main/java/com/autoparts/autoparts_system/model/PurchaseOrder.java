@@ -14,6 +14,6 @@ public class PurchaseOrder {
     private Long id;
     private Long supplierId;
     private LocalDate date;
-    private String status; // PENDING, SHIPPED, RECEIVED, CANCELLED
+    private String status;
     private BigDecimal total;
 }
