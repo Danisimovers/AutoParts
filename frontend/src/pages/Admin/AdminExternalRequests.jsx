@@ -34,6 +34,17 @@ function AdminExternalRequests() {
         }
     };
 
+    const orderFromRequest = async (id) => {
+        if (!window.confirm('Подтвердить заказ у поставщика?')) return;
+        try {
+            await api.post(`/admin/external-requests/${id}/order`);
+            alert('Заказ поставщику оформлен');
+            loadRequests();
+        } catch (error) {
+            alert('Ошибка оформления заказа');
+        }
+    };
+
     const addToStock = async (id) => {
         if (!window.confirm('Подтвердить получение товара и добавить на склад?')) return;
         try {
@@ -105,7 +116,7 @@ function AdminExternalRequests() {
                                         </span>
                                 </td>
                                 <td className="p-2 text-center">
-                                    <div className="flex gap-1 justify-center">
+                                    <div className="flex gap-1 justify-center flex-wrap">
                                         <select
                                             onChange={(e) => updateStatus(req.id, e.target.value)}
                                             defaultValue={req.status}
@@ -117,6 +128,14 @@ function AdminExternalRequests() {
                                             <option value="COMPLETED">Выполнен</option>
                                             <option value="REJECTED">Отклонен</option>
                                         </select>
+                                        {(req.status === 'PENDING' || req.status === 'PROCESSING') && (
+                                            <button
+                                                onClick={() => orderFromRequest(req.id)}
+                                                className="bg-purple-500 text-white px-2 py-1 rounded text-sm hover:bg-purple-600"
+                                            >
+                                                Заказать
+                                            </button>
+                                        )}
                                         {req.status === 'ORDERED' && (
                                             <button
                                                 onClick={() => addToStock(req.id)}
