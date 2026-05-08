@@ -3,6 +3,8 @@ import api from '../../api/api';
 
 function AdminProducts() {
     const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [manufacturers, setManufacturers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
@@ -19,6 +21,8 @@ function AdminProducts() {
 
     useEffect(() => {
         loadProducts();
+        loadCategories();
+        loadManufacturers();
     }, []);
 
     const loadProducts = async () => {
@@ -33,6 +37,28 @@ function AdminProducts() {
             alert('Ошибка загрузки товаров');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadCategories = async () => {
+        try {
+            const response = await api.get('/admin/categories');
+            if (response.data.success) {
+                setCategories(response.data.data);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки категорий:', error);
+        }
+    };
+
+    const loadManufacturers = async () => {
+        try {
+            const response = await api.get('/admin/manufacturers');
+            if (response.data.success) {
+                setManufacturers(response.data.data);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки производителей:', error);
         }
     };
 
@@ -82,74 +108,88 @@ function AdminProducts() {
         setShowForm(true);
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>Загрузка...</div>;
+    if (loading) return <div className="p-5">Загрузка...</div>;
 
     return (
-        <div style={{ padding: '20px', flex: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h1>Управление товарами</h1>
+        <div className="p-5 flex-1">
+            <div className="flex justify-between items-center mb-5">
+                <h1 className="text-2xl font-bold">Управление товарами</h1>
                 <button
                     onClick={() => {
                         setEditingProduct(null);
                         setFormData({ sku: '', name: '', description: '', price: '', categoryId: '', manufacturerId: '', oemCode: '' });
                         setShowForm(!showForm);
                     }}
-                    style={{ padding: '10px 20px', backgroundColor: '#e67e22', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    className="bg-orange-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-orange-600"
                 >
-                    {showForm ? 'Отмена' : 'Добавить товар'}
+                    {showForm ? 'Отмена' : '+ Добавить товар'}
                 </button>
             </div>
 
             {showForm && (
-                <form onSubmit={handleSubmit} style={{ backgroundColor: '#f5f5f5', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-                    <h3>{editingProduct ? 'Редактировать товар' : 'Новый товар'}</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                        <input type="text" placeholder="Артикул (SKU)" value={formData.sku} onChange={(e) => setFormData({ ...formData, sku: e.target.value })} required style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
-                        <input type="text" placeholder="Название" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
-                        <textarea placeholder="Описание" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows="3" style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', gridColumn: 'span 2' }} />
-                        <input type="number" placeholder="Цена" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
-                        <input type="text" placeholder="OEM код" value={formData.oemCode} onChange={(e) => setFormData({ ...formData, oemCode: e.target.value })} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
-                        <input type="text" placeholder="ID категории" value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
-                        <input type="text" placeholder="ID производителя" value={formData.manufacturerId} onChange={(e) => setFormData({ ...formData, manufacturerId: e.target.value })} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                <form onSubmit={handleSubmit} className="bg-gray-100 p-5 rounded-lg mb-5">
+                    <h3 className="text-lg font-bold mb-3">{editingProduct ? 'Редактировать товар' : 'Новый товар'}</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <input type="text" placeholder="Артикул (SKU)" value={formData.sku} onChange={(e) => setFormData({ ...formData, sku: e.target.value })} required className="p-2 border rounded" />
+                        <input type="text" placeholder="Название" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className="p-2 border rounded" />
+                        <textarea placeholder="Описание" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows="3" className="p-2 border rounded col-span-2" />
+                        <input type="number" placeholder="Цена" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required className="p-2 border rounded" />
+                        <input type="text" placeholder="OEM код" value={formData.oemCode} onChange={(e) => setFormData({ ...formData, oemCode: e.target.value })} className="p-2 border rounded" />
+
+                        <select value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} className="p-2 border rounded">
+                            <option value="">Выберите категорию</option>
+                            {categories.map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                        </select>
+
+                        <select value={formData.manufacturerId} onChange={(e) => setFormData({ ...formData, manufacturerId: e.target.value })} className="p-2 border rounded">
+                            <option value="">Выберите производителя</option>
+                            {manufacturers.map(man => (
+                                <option key={man.id} value={man.id}>{man.name}</option>
+                            ))}
+                        </select>
                     </div>
-                    <div style={{ marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                        <button type="submit" style={{ padding: '10px 20px', backgroundColor: '#e67e22', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                    <div className="flex gap-2 mt-4 justify-end">
+                        <button type="submit" className="bg-orange-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-orange-600">
                             {editingProduct ? 'Обновить' : 'Создать'}
                         </button>
-                        <button type="button" onClick={() => { setShowForm(false); setEditingProduct(null); }} style={{ padding: '10px 20px', backgroundColor: '#666', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                        <button type="button" onClick={() => { setShowForm(false); setEditingProduct(null); }} className="bg-gray-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-gray-600">
                             Отмена
                         </button>
                     </div>
                 </form>
             )}
 
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                <tr style={{ borderBottom: '2px solid #ddd' }}>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>ID</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>Артикул</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>Название</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Цена</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Остаток</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Действия</th>
-                </tr>
-                </thead>
-                <tbody>
-                {products.map(product => (
-                    <tr key={product.id} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '10px' }}>{product.id}</td>
-                        <td style={{ padding: '10px' }}>{product.sku}</td>
-                        <td style={{ padding: '10px' }}>{product.name}</td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>{product.price} ₽</td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>{product.stock}</td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>
-                            <button onClick={() => handleEdit(product)} style={{ marginRight: '10px', padding: '5px 10px', cursor: 'pointer' }}>Редакт.</button>
-                            <button onClick={() => handleDelete(product.id)} style={{ padding: '5px 10px', backgroundColor: '#ff4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Удалить</button>
-                        </td>
+            <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                    <thead className="bg-gray-100">
+                    <tr className="border-b">
+                        <th className="text-left p-2">ID</th>
+                        <th className="text-left p-2">Артикул</th>
+                        <th className="text-left p-2">Название</th>
+                        <th className="text-center p-2">Цена</th>
+                        <th className="text-center p-2">Остаток</th>
+                        <th className="text-center p-2">Действия</th>
                     </tr>
-                ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    {products.map(product => (
+                        <tr key={product.id} className="border-b">
+                            <td className="p-2">{product.id}</td>
+                            <td className="p-2">{product.sku}</td>
+                            <td className="p-2">{product.name}</td>
+                            <td className="text-center p-2">{product.price} ₽</td>
+                            <td className="text-center p-2">{product.stock}</td>
+                            <td className="text-center p-2">
+                                <button onClick={() => handleEdit(product)} className="bg-blue-500 text-white px-3 py-1 rounded mr-2 cursor-pointer hover:bg-blue-600">✏️</button>
+                                <button onClick={() => handleDelete(product.id)} className="bg-red-500 text-white px-3 py-1 rounded cursor-pointer hover:bg-red-600">🗑️</button>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
