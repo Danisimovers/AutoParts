@@ -277,9 +277,21 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(ApiResponse.error("Заказ уже обработан"));
             }
 
+            // Получаем supplier_id из запроса
+            Object supplierIdObj = request.get("supplier_id");
+            Long supplierId;
+            if (supplierIdObj == null) {
+                // Если supplier_id нет, пытаемся найти по имени
+                String supplierName = (String) request.get("supplier_name");
+                String findSupplierSql = "SELECT id FROM suppliers WHERE name = ?";
+                supplierId = jdbcTemplate.queryForObject(findSupplierSql, Long.class, supplierName);
+            } else {
+                supplierId = ((Number) supplierIdObj).longValue();
+            }
+
             String insertOrderSql = "INSERT INTO purchase_orders (supplier_id, date, status, total) VALUES (?, ?, ?, ?)";
             jdbcTemplate.update(insertOrderSql,
-                    request.get("supplier_name"),
+                    supplierId,
                     LocalDate.now(),
                     "ORDERED",
                     request.get("price"));

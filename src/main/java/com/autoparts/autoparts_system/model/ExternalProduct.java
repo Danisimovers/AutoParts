@@ -16,4 +16,5 @@ public class ExternalProduct {
     private Integer stock;
     private String delivery;
     private String supplierName;
+    private Long supplierId;
 }

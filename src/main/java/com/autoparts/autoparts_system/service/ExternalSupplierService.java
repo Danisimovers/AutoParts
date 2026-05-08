@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 @Service
 public class ExternalSupplierService {
 
+
     @Autowired
     private SupplierService supplierService;
 
@@ -44,9 +45,9 @@ public class ExternalSupplierService {
 
     private List<ExternalProduct> getMockProducts(String query, Supplier supplier) {
         List<ExternalProduct> mockProducts = Arrays.asList(
-                new ExternalProduct(1L, "M8020240", "Пружина подвески передняя", "MARSHALL", 2450.00, 3, "3-5 дней", supplier.getName()),
-                new ExternalProduct(2L, "050.034", "Опора резиновая", "SAMPA", 890.00, 5, "В наличии", supplier.getName()),
-                new ExternalProduct(3L, "M12332", "Тормозные колодки", "TRW", 1850.00, 2, "3-5 дней", supplier.getName())
+                new ExternalProduct(1L, "M8020240", "Пружина подвески передняя", "MARSHALL", 2450.00, 3, "3-5 дней", supplier.getName(), supplier.getId()),
+                new ExternalProduct(2L, "050.034", "Опора резиновая", "SAMPA", 890.00, 5, "В наличии", supplier.getName(), supplier.getId()),
+                new ExternalProduct(3L, "M12332", "Тормозные колодки", "TRW", 1850.00, 2, "3-5 дней", supplier.getName(), supplier.getId())
         );
 
         return mockProducts.stream()
