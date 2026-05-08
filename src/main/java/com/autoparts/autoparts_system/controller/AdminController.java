@@ -4,10 +4,7 @@ import com.autoparts.autoparts_system.dto.request.CreateProductRequest;
 import com.autoparts.autoparts_system.dto.request.UpdateProductRequest;
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.dto.response.ProductDTO;
-import com.autoparts.autoparts_system.model.Category;
-import com.autoparts.autoparts_system.model.Product;
-import com.autoparts.autoparts_system.model.Supplier;
-import com.autoparts.autoparts_system.model.User;
+import com.autoparts.autoparts_system.model.*;
 import com.autoparts.autoparts_system.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -201,6 +198,43 @@ public class AdminController {
         try {
             categoryService.deleteCategory(id);
             return ResponseEntity.ok(ApiResponse.success("Категория удалена", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+
+    @GetMapping("/manufacturers")
+    public ResponseEntity<ApiResponse> getAllManufacturers() {
+        List<Manufacturer> manufacturers = manufacturerService.getAllManufacturers();
+        return ResponseEntity.ok(ApiResponse.success("Производители загружены", manufacturers));
+    }
+
+    @PostMapping("/manufacturers")
+    public ResponseEntity<ApiResponse> createManufacturer(@RequestBody Manufacturer manufacturer) {
+        try {
+            Manufacturer created = manufacturerService.createManufacturer(manufacturer);
+            return ResponseEntity.ok(ApiResponse.success("Производитель создан", created));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/manufacturers/{id}")
+    public ResponseEntity<ApiResponse> updateManufacturer(@PathVariable Long id, @RequestBody Manufacturer manufacturer) {
+        try {
+            Manufacturer updated = manufacturerService.updateManufacturer(id, manufacturer);
+            return ResponseEntity.ok(ApiResponse.success("Производитель обновлен", updated));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/manufacturers/{id}")
+    public ResponseEntity<ApiResponse> deleteManufacturer(@PathVariable Long id) {
+        try {
+            manufacturerService.deleteManufacturer(id);
+            return ResponseEntity.ok(ApiResponse.success("Производитель удален", null));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
