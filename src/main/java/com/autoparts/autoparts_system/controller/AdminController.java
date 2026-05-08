@@ -314,48 +314,98 @@ public class AdminController {
     @PutMapping("/external-requests/{id}/add-to-stock")
     public ResponseEntity<ApiResponse> addToStockFromRequest(@PathVariable Long id) {
         try {
+            System.out.println("=== addToStockFromRequest START ===");
+            System.out.println("Request ID: " + id);
+
             String selectSql = "SELECT * FROM external_requests WHERE id = ?";
             Map<String, Object> request = jdbcTemplate.queryForMap(selectSql, id);
 
+            System.out.println("Request data: " + request);
+
             String status = (String) request.get("status");
+            System.out.println("Status: " + status);
+
             if (!"ORDERED".equals(status)) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("Товар еще не заказан у поставщика"));
             }
 
             String factoryNumber = (String) request.get("factory_number");
+            String producerName = (String) request.get("producer");
+            System.out.println("Factory number: " + factoryNumber);
+            System.out.println("Producer: " + producerName);
+
+            // Получаем или создаем категорию по умолчанию
+            Long defaultCategoryId;
+            String checkCategorySql = "SELECT id FROM categories WHERE name = 'Без категории'";
+            try {
+                defaultCategoryId = jdbcTemplate.queryForObject(checkCategorySql, Long.class);
+            } catch (Exception e) {
+                String insertCategorySql = "INSERT INTO categories (name) VALUES ('Без категории')";
+                jdbcTemplate.update(insertCategorySql);
+                defaultCategoryId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
+            }
+
+            // Получаем или создаем производителя из запроса
+            Long manufacturerId;
+            String checkManufacturerSql = "SELECT id FROM manufacturers WHERE name = ?";
+            try {
+                manufacturerId = jdbcTemplate.queryForObject(checkManufacturerSql, Long.class, producerName);
+            } catch (Exception e) {
+                String insertManufacturerSql = "INSERT INTO manufacturers (name) VALUES (?)";
+                jdbcTemplate.update(insertManufacturerSql, producerName);
+                manufacturerId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
+                System.out.println("Created new manufacturer: " + producerName + " with ID: " + manufacturerId);
+            }
+
             String checkProductSql = "SELECT id FROM products WHERE sku = ?";
             Long productId;
             try {
                 productId = jdbcTemplate.queryForObject(checkProductSql, Long.class, factoryNumber);
+                System.out.println("Existing product found: " + productId);
             } catch (Exception e) {
-                String insertProductSql = "INSERT INTO products (sku, name, price) VALUES (?, ?, ?)";
-                jdbcTemplate.update(insertProductSql, factoryNumber, request.get("product_name"), request.get("price"));
+                System.out.println("Product not found, creating new...");
+                String insertProductSql = "INSERT INTO products (sku, name, price, category_id, manufacturer_id) VALUES (?, ?, ?, ?, ?)";
+                jdbcTemplate.update(insertProductSql,
+                        factoryNumber,
+                        request.get("product_name"),
+                        request.get("price"),
+                        defaultCategoryId,
+                        manufacturerId);
                 productId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
+                System.out.println("New product created with ID: " + productId);
             }
 
+            // Добавляем остатки (пока 1 шт, заглушка)
             String checkInventorySql = "SELECT id FROM inventory WHERE product_id = ?";
             try {
                 jdbcTemplate.queryForObject(checkInventorySql, Long.class, productId);
-                String updateInventorySql = "UPDATE inventory SET quantity = quantity + 5 WHERE product_id = ?";
+                // Если есть — увеличиваем на 1
+                String updateInventorySql = "UPDATE inventory SET quantity = quantity + 1 WHERE product_id = ?";
                 jdbcTemplate.update(updateInventorySql, productId);
             } catch (Exception e) {
+                // Если нет — создаем с количеством 1
                 String insertInventorySql = "INSERT INTO inventory (product_id, quantity, warehouse_id) VALUES (?, ?, ?)";
-                jdbcTemplate.update(insertInventorySql, productId, 5, "MAIN");
+                jdbcTemplate.update(insertInventorySql, productId, 1, "MAIN");
             }
 
             String updateSql = "UPDATE external_requests SET status = 'COMPLETED' WHERE id = ?";
             jdbcTemplate.update(updateSql, id);
+            System.out.println("Status updated to COMPLETED");
 
             Long userId = ((Number) request.get("user_id")).longValue();
+            System.out.println("User ID: " + userId);
 
             String insertNotifSql = "INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES (?, ?, ?, ?, ?, ?)";
             jdbcTemplate.update(insertNotifSql, userId, "EXTERNAL_REQUEST_STATUS",
                     "Товар поступил на склад",
                     "Запрошенный товар " + request.get("product_name") + " теперь доступен для заказа",
                     "/catalog?search=" + factoryNumber, false);
+            System.out.println("Notification sent");
 
+            System.out.println("=== addToStockFromRequest SUCCESS ===");
             return ResponseEntity.ok(ApiResponse.success("Товар добавлен на склад", Map.of("productId", productId)));
         } catch (Exception e) {
+            System.err.println("=== addToStockFromRequest ERROR ===");
             e.printStackTrace();
             return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
         }
