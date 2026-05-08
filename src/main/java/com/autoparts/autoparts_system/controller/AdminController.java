@@ -13,7 +13,7 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import com.autoparts.autoparts_system.service.SupplierService;
-
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -303,6 +303,101 @@ public class AdminController {
             case "COMPLETED": return "Выполнен";
             case "REJECTED": return "Отклонен";
             default: return status;
+        }
+    }
+
+    // Создать заказ поставщику из запроса
+    @PostMapping("/external-requests/{id}/order")
+    public ResponseEntity<ApiResponse> orderFromRequest(@PathVariable Long id) {
+        try {
+            // Получаем данные запроса
+            String selectSql = "SELECT * FROM external_requests WHERE id = ?";
+            Map<String, Object> request = jdbcTemplate.queryForMap(selectSql, id);
+
+            String status = (String) request.get("status");
+            if (!"PROCESSING".equals(status) && !"PENDING".equals(status)) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Заказ уже обработан"));
+            }
+
+            // Создаем заказ поставщику
+            String insertOrderSql = "INSERT INTO purchase_orders (supplier_id, date, status, total) VALUES (?, ?, ?, ?)";
+            jdbcTemplate.update(insertOrderSql,
+                    request.get("supplier_name"), // временно, потом заменим на supplier_id
+                    LocalDate.now(),
+                    "ORDERED",
+                    request.get("price"));
+
+            // Обновляем статус запроса
+            String updateSql = "UPDATE external_requests SET status = 'ORDERED' WHERE id = ?";
+            jdbcTemplate.update(updateSql, id);
+
+            // Уведомление пользователю
+            Long userId = (Long) request.get("user_id");
+            String insertNotifSql = "INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES (?, ?, ?, ?, ?, ?)";
+            jdbcTemplate.update(insertNotifSql, userId, "EXTERNAL_REQUEST_STATUS",
+                    "Товар заказан у поставщика",
+                    "Ваш запрос на товар " + request.get("product_name") + " передан в заказ поставщику",
+                    "/profile?tab=external-requests", false);
+
+            return ResponseEntity.ok(ApiResponse.success("Заказ поставщику создан", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
+        }
+    }
+
+    // Добавить товар на склад из запроса
+    @PutMapping("/external-requests/{id}/add-to-stock")
+    public ResponseEntity<ApiResponse> addToStockFromRequest(@PathVariable Long id) {
+        try {
+            String selectSql = "SELECT * FROM external_requests WHERE id = ?";
+            Map<String, Object> request = jdbcTemplate.queryForMap(selectSql, id);
+
+            String status = (String) request.get("status");
+            if (!"ORDERED".equals(status)) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Товар еще не заказан у поставщика"));
+            }
+
+            // Ищем товар по артикулу в products
+            String factoryNumber = (String) request.get("factory_number");
+            String checkProductSql = "SELECT id FROM products WHERE sku = ?";
+            Long productId;
+            try {
+                productId = jdbcTemplate.queryForObject(checkProductSql, Long.class, factoryNumber);
+            } catch (Exception e) {
+                // Если товара нет — создаем
+                String insertProductSql = "INSERT INTO products (sku, name, price) VALUES (?, ?, ?)";
+                jdbcTemplate.update(insertProductSql, factoryNumber, request.get("product_name"), request.get("price"));
+                productId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
+            }
+
+            // Добавляем остатки
+            String checkInventorySql = "SELECT id FROM inventory WHERE product_id = ?";
+            try {
+                jdbcTemplate.queryForObject(checkInventorySql, Long.class, productId);
+                // Если есть — обновляем
+                String updateInventorySql = "UPDATE inventory SET quantity = quantity + 5 WHERE product_id = ?";
+                jdbcTemplate.update(updateInventorySql, productId);
+            } catch (Exception e) {
+                // Если нет — создаем
+                String insertInventorySql = "INSERT INTO inventory (product_id, quantity, warehouse_id) VALUES (?, ?, ?)";
+                jdbcTemplate.update(insertInventorySql, productId, 5, "MAIN");
+            }
+
+            // Обновляем статус запроса
+            String updateSql = "UPDATE external_requests SET status = 'COMPLETED' WHERE id = ?";
+            jdbcTemplate.update(updateSql, id);
+
+            // Уведомление пользователю
+            Long userId = (Long) request.get("user_id");
+            String insertNotifSql = "INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES (?, ?, ?, ?, ?, ?)";
+            jdbcTemplate.update(insertNotifSql, userId, "EXTERNAL_REQUEST_STATUS",
+                    "Товар поступил на склад",
+                    "Запрошенный товар " + request.get("product_name") + " теперь доступен для заказа",
+                    "/catalog?search=" + factoryNumber, false);
+
+            return ResponseEntity.ok(ApiResponse.success("Товар добавлен на склад", Map.of("productId", productId)));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
         }
     }
 

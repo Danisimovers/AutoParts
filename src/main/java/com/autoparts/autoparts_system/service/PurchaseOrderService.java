@@ -26,10 +26,6 @@ public class PurchaseOrderService {
         return purchaseOrderRepository.findById(id);
     }
 
-    public List<PurchaseOrder> getPurchaseOrdersBySupplierId(Long supplierId) {
-        return purchaseOrderRepository.findBySupplierId(supplierId);
-    }
-
     public PurchaseOrder createPurchaseOrder(PurchaseOrder order) {
         order.setDate(LocalDate.now());
         order.setStatus("PENDING");
@@ -46,9 +42,6 @@ public class PurchaseOrderService {
 
         order.setStatus("RECEIVED");
         purchaseOrderRepository.updateStatus(orderId, "RECEIVED");
-
-        // Здесь нужно добавить логику пополнения склада
-        // Для упрощения оставляем заглушку
 
         return order;
     }
