@@ -277,11 +277,9 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(ApiResponse.error("Заказ уже обработан"));
             }
 
-            // Получаем supplier_id из запроса
             Object supplierIdObj = request.get("supplier_id");
             Long supplierId;
             if (supplierIdObj == null) {
-                // Если supplier_id нет, пытаемся найти по имени
                 String supplierName = (String) request.get("supplier_name");
                 String findSupplierSql = "SELECT id FROM suppliers WHERE name = ?";
                 supplierId = jdbcTemplate.queryForObject(findSupplierSql, Long.class, supplierName);
@@ -299,7 +297,8 @@ public class AdminController {
             String updateSql = "UPDATE external_requests SET status = 'ORDERED' WHERE id = ?";
             jdbcTemplate.update(updateSql, id);
 
-            Long userId = (Long) request.get("user_id");
+            Long userId = ((Number) request.get("user_id")).longValue();
+
             String insertNotifSql = "INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES (?, ?, ?, ?, ?, ?)";
             jdbcTemplate.update(insertNotifSql, userId, "EXTERNAL_REQUEST_STATUS",
                     "Товар заказан у поставщика",
@@ -347,7 +346,7 @@ public class AdminController {
             String updateSql = "UPDATE external_requests SET status = 'COMPLETED' WHERE id = ?";
             jdbcTemplate.update(updateSql, id);
 
-            Long userId = (Long) request.get("user_id");
+            Long userId = ((Number) request.get("user_id")).longValue();
             String insertNotifSql = "INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES (?, ?, ?, ?, ?, ?)";
             jdbcTemplate.update(insertNotifSql, userId, "EXTERNAL_REQUEST_STATUS",
                     "Товар поступил на склад",
