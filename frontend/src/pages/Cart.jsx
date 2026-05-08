@@ -28,9 +28,9 @@ function Cart() {
         }
     };
 
-    const updateQuantity = async (productId, quantity) => {
+    const updateQuantity = async (itemId, quantity) => {
         try {
-            const response = await api.put('/cart/update', { productId, quantity });
+            const response = await api.put('/cart/update', { itemId, quantity });
             if (response.data.success) {
                 setCart(response.data.data);
             }
@@ -39,9 +39,9 @@ function Cart() {
         }
     };
 
-    const removeItem = async (productId) => {
+    const removeItem = async (itemId) => {
         try {
-            const response = await api.delete(`/cart/remove/${productId}`);
+            const response = await api.delete(`/cart/remove/${itemId}`);
             if (response.data.success) {
                 setCart(response.data.data);
             }
@@ -74,12 +74,12 @@ function Cart() {
         }
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>Загрузка...</div>;
+    if (loading) return <div className="p-5">Загрузка...</div>;
     if (!cart || cart.items.length === 0) {
         return (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-                <h2>Корзина пуста</h2>
-                <button onClick={() => navigate('/')} style={{ padding: '10px 20px', cursor: 'pointer' }}>
+            <div className="p-5 text-center">
+                <h2 className="text-2xl mb-4">Корзина пуста</h2>
+                <button onClick={() => navigate('/')} className="bg-orange-500 text-white px-4 py-2 rounded">
                     Перейти в каталог
                 </button>
             </div>
@@ -87,100 +87,71 @@ function Cart() {
     }
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h1>Корзина</h1>
+        <div className="p-5">
+            <h1 className="text-3xl font-bold mb-6">Корзина</h1>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                <tr style={{ borderBottom: '2px solid #ddd' }}>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>Товар</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Цена</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Количество</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Сумма</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}></th>
-                </tr>
-                </thead>
-                <tbody>
-                {cart.items.map(item => (
-                    <tr key={item.productId} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '10px' }}>
-                            <div>
-                                <strong>{item.name}</strong>
-                                <div style={{ fontSize: '12px', color: '#666' }}>Артикул: {item.sku}</div>
-                            </div>
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>{item.price} ₽</td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>
-                            <input
-                                type="number"
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value))}
-                                style={{ width: '60px', padding: '5px', textAlign: 'center' }}
-                            />
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '10px', fontWeight: 'bold' }}>
-                            {item.total} ₽
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>
-                            <button
-                                onClick={() => removeItem(item.productId)}
-                                style={{
-                                    backgroundColor: '#ff4444',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '5px 10px',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Удалить
-                            </button>
-                        </td>
+            <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                    <thead className="bg-gray-100">
+                    <tr className="border-b">
+                        <th className="text-left p-2">Товар</th>
+                        <th className="text-center p-2">Цена</th>
+                        <th className="text-center p-2">Количество</th>
+                        <th className="text-center p-2">Сумма</th>
+                        <th className="text-center p-2"></th>
                     </tr>
-                ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    {cart.items.map(item => (
+                        <tr key={item.itemId || item.productId} className="border-b">
+                            <td className="p-2">
+                                <div>
+                                    <strong>{item.name}</strong>
+                                    {item.sku && <div className="text-xs text-gray-500">Артикул: {item.sku}</div>}
+                                </div>
+                            </td>
+                            <td className="text-center p-2">{item.price} ₽</td>
+                            <td className="text-center p-2">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={item.quantity}
+                                    onChange={(e) => updateQuantity(item.itemId || item.productId, parseInt(e.target.value))}
+                                    className="w-16 p-1 text-center border rounded"
+                                />
+                            </td>
+                            <td className="text-center p-2 font-bold">{item.total} ₽</td>
+                            <td className="text-center p-2">
+                                <button
+                                    onClick={() => removeItem(item.itemId || item.productId)}
+                                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                                >
+                                    Удалить
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
 
-            <div style={{
-                marginTop: '20px',
-                padding: '20px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: '8px',
-                textAlign: 'right'
-            }}>
-                <div style={{ fontSize: '18px', marginBottom: '10px' }}>
+            <div className="mt-5 p-4 bg-gray-100 rounded-lg text-right">
+                <div className="text-lg mb-2">
                     <strong>Итого товаров:</strong> {cart.totalItems} шт
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e67e22', marginBottom: '20px' }}>
+                <div className="text-2xl font-bold text-orange-500 mb-4">
                     Общая сумма: {cart.totalPrice} ₽
                 </div>
-
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <div className="flex gap-3 justify-end">
                     <button
                         onClick={clearCart}
-                        style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#666',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                        }}
+                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                     >
                         Очистить корзину
                     </button>
                     <button
                         onClick={checkout}
-                        style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#e67e22',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '16px'
-                        }}
+                        className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
                     >
                         Оформить заказ
                     </button>

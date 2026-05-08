@@ -71,6 +71,7 @@ function MyOrders() {
             case 'SHIPPED': return 'bg-purple-500';
             case 'DELIVERED': return 'bg-green-500';
             case 'CANCELLED': return 'bg-red-500';
+            case 'PENDING_SUPPLIER': return 'bg-purple-500';
             default: return 'bg-gray-500';
         }
     };
@@ -82,6 +83,7 @@ function MyOrders() {
             case 'SHIPPED': return 'Отправлен';
             case 'DELIVERED': return 'Доставлен';
             case 'CANCELLED': return 'Отменен';
+            case 'PENDING_SUPPLIER': return 'Ожидает поставки';
             default: return status;
         }
     };
@@ -141,8 +143,8 @@ function MyOrders() {
                             <tr key={item.id} className="border-b border-gray-200">
                                 <td className="p-2">
                                     <div>
-                                        <strong>{item.productName}</strong>
-                                        <div className="text-xs text-gray-500">Артикул: {item.productSku}</div>
+                                        <strong>{item.productName || 'Товар поставщика'}</strong>
+                                        {item.productSku && <div className="text-xs text-gray-500">Артикул: {item.productSku}</div>}
                                     </div>
                                 </td>
                                 <td className="text-center p-2">{item.price} ₽</td>
@@ -169,7 +171,6 @@ function MyOrders() {
                 </div>
             ))}
 
-            {/* Модальное окно */}
             {showReturnModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[1000]">
                     <div className="bg-white p-8 rounded-lg max-w-md w-[90%]">

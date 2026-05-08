@@ -36,12 +36,13 @@ function ManagerOrders() {
 
     const getStatusColor = (status) => {
         switch(status) {
-            case 'CREATED': return '#ff9800';
-            case 'PAID': return '#2196f3';
-            case 'SHIPPED': return '#9c27b0';
-            case 'DELIVERED': return '#4caf50';
-            case 'CANCELLED': return '#f44336';
-            default: return '#666';
+            case 'CREATED': return 'bg-yellow-500';
+            case 'PAID': return 'bg-blue-500';
+            case 'SHIPPED': return 'bg-purple-500';
+            case 'DELIVERED': return 'bg-green-500';
+            case 'CANCELLED': return 'bg-red-500';
+            case 'PENDING_SUPPLIER': return 'bg-purple-500';
+            default: return 'bg-gray-500';
         }
     };
 
@@ -52,61 +53,59 @@ function ManagerOrders() {
             case 'SHIPPED': return 'Отправлен';
             case 'DELIVERED': return 'Доставлен';
             case 'CANCELLED': return 'Отменен';
+            case 'PENDING_SUPPLIER': return 'Ожидает поставки';
             default: return status;
         }
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>Загрузка...</div>;
+    if (loading) return <div className="p-5">Загрузка...</div>;
 
     return (
-        <div>
-            <h1>Управление заказами</h1>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                <tr style={{ borderBottom: '2px solid #ddd' }}>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>ID заказа</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>ID пользователя</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>Сумма</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>Дата</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Статус</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Действие</th>
-                </tr>
-                </thead>
-                <tbody>
-                {orders.map(order => (
-                    <tr key={order.id} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '10px' }}>#{order.id}</td>
-                        <td style={{ padding: '10px' }}>{order.userId}</td>
-                        <td style={{ padding: '10px' }}>{order.total} ₽</td>
-                        <td style={{ padding: '10px' }}>{new Date(order.createdAt).toLocaleDateString()}</td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>
-                                <span style={{
-                                    backgroundColor: getStatusColor(order.status),
-                                    color: 'white',
-                                    padding: '4px 12px',
-                                    borderRadius: '20px',
-                                    fontSize: '12px'
-                                }}>
-                                    {getStatusText(order.status)}
-                                </span>
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>
-                            <select
-                                onChange={(e) => updateStatus(order.id, e.target.value)}
-                                defaultValue={order.status}
-                                style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #ddd' }}
-                            >
-                                <option value="CREATED">Создан</option>
-                                <option value="PAID">Оплачен</option>
-                                <option value="SHIPPED">Отправлен</option>
-                                <option value="DELIVERED">Доставлен</option>
-                                <option value="CANCELLED">Отменен</option>
-                            </select>
-                        </td>
+        <div className="p-5">
+            <h1 className="text-2xl font-bold mb-5">Управление заказами</h1>
+            <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                    <thead className="bg-gray-100">
+                    <tr className="border-b">
+                        <th className="text-left p-2">ID заказа</th>
+                        <th className="text-left p-2">ID пользователя</th>
+                        <th className="text-left p-2">Сумма</th>
+                        <th className="text-left p-2">Дата</th>
+                        <th className="text-center p-2">Статус</th>
+                        <th className="text-center p-2">Действие</th>
                     </tr>
-                ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    {orders.map(order => (
+                        <tr key={order.id} className="border-b">
+                            <td className="p-2">#{order.id}</td>
+                            <td className="p-2">{order.userId}</td>
+                            <td className="p-2">{order.total} ₽</td>
+                            <td className="p-2">{new Date(order.createdAt).toLocaleDateString()}</td>
+                            <td className="text-center p-2">
+                                    <span className={`${getStatusColor(order.status)} text-white px-2 py-1 rounded-full text-xs`}>
+                                        {getStatusText(order.status)}
+                                    </span>
+                            </td>
+                            <td className="text-center p-2">
+                                <select
+                                    onChange={(e) => updateStatus(order.id, e.target.value)}
+                                    defaultValue={order.status}
+                                    className="p-1 border rounded text-sm"
+                                >
+                                    <option value="CREATED">Создан</option>
+                                    <option value="PAID">Оплачен</option>
+                                    <option value="SHIPPED">Отправлен</option>
+                                    <option value="DELIVERED">Доставлен</option>
+                                    <option value="CANCELLED">Отменен</option>
+                                    <option value="PENDING_SUPPLIER">Ожидает поставки</option>
+                                </select>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

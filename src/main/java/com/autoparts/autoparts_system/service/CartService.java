@@ -7,14 +7,12 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class CartService {
 
     // Хранилище корзин: ключ - userId, значение - Map<cartItemId, CartItem>
     private final Map<Long, Map<String, CartItem>> userCarts = new ConcurrentHashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong(1);
 
     // Внутренний класс для товаров в корзине (включая товары поставщиков)
     public static class CartItem {
@@ -125,5 +123,33 @@ public class CartService {
 
     public void clearCart(Long userId) {
         userCarts.remove(userId);
+    }
+
+    // Временные методы для совместимости с OrderService
+    public Map<Long, Integer> getCartLegacy(Long userId) {
+        Map<Long, Integer> legacyCart = new HashMap<>();
+        Map<String, CartItem> cart = userCarts.get(userId);
+        if (cart != null) {
+            for (CartItem item : cart.values()) {
+                if ("REGULAR".equals(item.getType()) && item.getProductId() != null) {
+                    legacyCart.put(item.getProductId(), item.getQuantity());
+                }
+            }
+        }
+        return legacyCart;
+    }
+
+    public void clearCartLegacy(Long userId) {
+        userCarts.remove(userId);
+    }
+
+    public double getTotalPriceLegacy(Long userId, ProductService productService) {
+        Map<Long, Integer> cart = getCartLegacy(userId);
+        return cart.entrySet().stream()
+                .mapToDouble(entry -> {
+                    Product product = productService.getProductById(entry.getKey());
+                    return product.getPrice().doubleValue() * entry.getValue();
+                })
+                .sum();
     }
 }

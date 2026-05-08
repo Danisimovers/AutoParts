@@ -37,15 +37,29 @@ public class OrderService {
         System.out.println("=== CREATE ORDER ===");
         System.out.println("UserId: " + userId);
 
-        Map<Long, Integer> cart = cartService.getCart(userId);
+        // Получаем полную корзину (включая товары поставщиков)
+        Map<String, CartService.CartItem> cart = cartService.getCart(userId);
         System.out.println("Cart size: " + cart.size());
 
         if (cart.isEmpty()) {
             throw new IllegalArgumentException("Корзина пуста");
         }
 
-        // Проверяем наличие товаров
-        for (Map.Entry<Long, Integer> entry : cart.entrySet()) {
+        // Отделяем обычные товары от товаров поставщиков
+        Map<Long, Integer> regularItems = new java.util.HashMap<>();
+        Map<String, CartService.CartItem> externalItems = new java.util.HashMap<>();
+
+        for (Map.Entry<String, CartService.CartItem> entry : cart.entrySet()) {
+            CartService.CartItem item = entry.getValue();
+            if ("REGULAR".equals(item.getType())) {
+                regularItems.put(item.getProductId(), item.getQuantity());
+            } else {
+                externalItems.put(entry.getKey(), item);
+            }
+        }
+
+        // Проверяем наличие обычных товаров на складе
+        for (Map.Entry<Long, Integer> entry : regularItems.entrySet()) {
             Long productId = entry.getKey();
             int quantity = entry.getValue();
 
@@ -58,18 +72,35 @@ public class OrderService {
         // Создаем заказ
         SalesOrder order = new SalesOrder();
         order.setUserId(userId);
-        order.setStatus("CREATED");
+
+        // Если есть товары поставщиков, ставим статус PENDING_SUPPLIER
+        if (!externalItems.isEmpty()) {
+            order.setStatus("PENDING_SUPPLIER");
+        } else {
+            order.setStatus("CREATED");
+        }
         order.setCreatedAt(LocalDateTime.now());
 
-        // Вычисляем общую сумму
-        double total = cartService.getTotalPrice(userId, productService);
-        order.setTotal(BigDecimal.valueOf(total));
+        // Вычисляем общую сумму (обычные товары + товары поставщиков)
+        double total = 0;
 
+        // Обычные товары
+        for (Map.Entry<Long, Integer> entry : regularItems.entrySet()) {
+            Product product = productService.getProductById(entry.getKey());
+            total += product.getPrice().doubleValue() * entry.getValue();
+        }
+
+        // Товары поставщиков
+        for (CartService.CartItem item : externalItems.values()) {
+            total += item.getPrice().doubleValue() * item.getQuantity();
+        }
+
+        order.setTotal(BigDecimal.valueOf(total));
         salesOrderRepository.save(order);
         System.out.println("Order created with id: " + order.getId());
 
-        // Сохраняем позиции заказа и списываем товары
-        for (Map.Entry<Long, Integer> entry : cart.entrySet()) {
+        // Сохраняем позиции обычных товаров и списываем их со склада
+        for (Map.Entry<Long, Integer> entry : regularItems.entrySet()) {
             Long productId = entry.getKey();
             int quantity = entry.getValue();
             Product product = productService.getProductById(productId);
@@ -80,11 +111,23 @@ public class OrderService {
             orderItem.setQuantity(quantity);
             orderItem.setPrice(product.getPrice());
             orderItemRepository.save(orderItem);
-            System.out.println("OrderItem saved: productId=" + productId + ", quantity=" + quantity);
 
             // Списываем товар со склада
             stockService.removeStock(productId, quantity);
-            System.out.println("Stock removed for productId=" + productId + ", quantity=" + quantity);
+        }
+
+        // Сохраняем позиции товаров поставщиков (с пометкой, что это external)
+        for (Map.Entry<String, CartService.CartItem> entry : externalItems.entrySet()) {
+            CartService.CartItem item = entry.getValue();
+
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrderId(order.getId());
+            orderItem.setProductId(null); // Нет ID в нашей системе
+            orderItem.setQuantity(item.getQuantity());
+            orderItem.setPrice(item.getPrice());
+            orderItemRepository.save(orderItem);
+
+            System.out.println("External OrderItem saved: " + item.getProductName() + ", quantity=" + item.getQuantity());
         }
 
         // Очищаем корзину
