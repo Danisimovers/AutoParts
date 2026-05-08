@@ -178,4 +178,43 @@ public class ManagerController {
         List<ExternalRequest> requests = externalRequestRepository.findAll();
         return ResponseEntity.ok(ApiResponse.success("Запросы загружены", requests));
     }
+
+    // Обновить статус запроса
+    @PutMapping("/external-requests/{id}/status")
+    public ResponseEntity<ApiResponse> updateExternalRequestStatus(
+            @PathVariable Long id,
+            @RequestParam String status) {
+        try {
+            String sql = "UPDATE external_requests SET status = ? WHERE id = ?";
+            jdbcTemplate.update(sql, status, id);
+
+            // Уведомление пользователю
+            String selectSql = "SELECT user_id FROM external_requests WHERE id = ?";
+            Long userId = jdbcTemplate.queryForObject(selectSql, Long.class, id);
+
+            Notification notification = new Notification();
+            notification.setUserId(userId);
+            notification.setType("EXTERNAL_REQUEST_STATUS");
+            notification.setTitle("Статус вашего запроса изменен");
+            notification.setMessage("Статус запроса на товар изменен на: " + getStatusText(status));
+            notification.setLink("/profile?tab=external-requests");
+            notification.setRead(false);
+            notificationRepository.save(notification);
+
+            return ResponseEntity.ok(ApiResponse.success("Статус обновлен", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
+        }
+    }
+
+    private String getStatusText(String status) {
+        switch(status) {
+            case "PENDING": return "Ожидает обработки";
+            case "PROCESSING": return "В обработке";
+            case "ORDERED": return "Заказан у поставщика";
+            case "COMPLETED": return "Выполнен";
+            case "REJECTED": return "Отклонен";
+            default: return status;
+        }
+    }
 }

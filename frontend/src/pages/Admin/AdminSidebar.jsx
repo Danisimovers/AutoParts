@@ -8,7 +8,6 @@ function AdminSidebar() {
         { path: '/admin/manufacturers', name: 'Производители' },
         { path: '/admin/users', name: 'Пользователи' },
         { path: '/admin/stock', name: 'Остатки' },
-        { path: '/admin/returns', name: 'Возвраты' },
         { path: '/admin/suppliers', name: 'Поставщики' },
         { path: '/admin/reports', name: 'Отчеты' },
     ];
