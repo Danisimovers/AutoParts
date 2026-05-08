@@ -30,7 +30,6 @@ public class CartController {
     private ProductService productService;
 
     private Long getCurrentUserId() {
-        // Получаем userId из details, который мы установили в JwtAuthFilter
         Object details = SecurityContextHolder.getContext().getAuthentication().getDetails();
         if (details instanceof Map) {
             Object userId = ((Map<?, ?>) details).get("userId");
@@ -41,23 +40,12 @@ public class CartController {
                 return ((Integer) userId).longValue();
             }
         }
-
-        // Если не нашли, пробуем через Principal (логин)
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
-            String username = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
-            System.out.println("Username from principal: " + username);
-            // TODO: найти пользователя по логину и вернуть его ID
-            // Пока бросаем исключение
-        }
-
-        throw new RuntimeException("Не удалось определить ID пользователя. Проверьте JwtAuthFilter.");
+        throw new RuntimeException("Не удалось определить ID пользователя");
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse> getCart() {
         Long userId = getCurrentUserId();
-        System.out.println("Get cart for userId: " + userId);
         CartResponseDTO response = buildCartResponse(userId);
         return ResponseEntity.ok(ApiResponse.success("Корзина загружена", response));
     }
@@ -66,7 +54,6 @@ public class CartController {
     public ResponseEntity<ApiResponse> addToCart(@RequestBody AddToCartRequest request) {
         try {
             Long userId = getCurrentUserId();
-            System.out.println("Add to cart: userId=" + userId + ", productId=" + request.getProductId() + ", quantity=" + request.getQuantity());
             cartService.addToCart(userId, request.getProductId(), request.getQuantity());
             CartResponseDTO response = buildCartResponse(userId);
             return ResponseEntity.ok(ApiResponse.success("Товар добавлен в корзину", response));
@@ -75,11 +62,34 @@ public class CartController {
         }
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<ApiResponse> updateQuantity(@RequestBody UpdateCartRequest request) {
+    @PostMapping("/add-external")
+    public ResponseEntity<ApiResponse> addExternalToCart(@RequestBody Map<String, Object> request) {
         try {
             Long userId = getCurrentUserId();
-            cartService.updateQuantity(userId, request.getProductId(), request.getQuantity());
+            String productName = (String) request.get("productName");
+            String factoryNumber = (String) request.get("factoryNumber");
+            String producer = (String) request.get("producer");
+            String supplierName = (String) request.get("supplierName");
+            BigDecimal price = new BigDecimal(request.get("price").toString());
+            int quantity = (Integer) request.get("quantity");
+
+            cartService.addExternalToCart(userId, productName, factoryNumber, producer, supplierName, price, quantity);
+            CartResponseDTO response = buildCartResponse(userId);
+            return ResponseEntity.ok(ApiResponse.success("Товар поставщика добавлен в корзину", response));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/update")
+    public ResponseEntity<ApiResponse> updateQuantity(@RequestBody Map<String, Object> request) {
+        try {
+            Long userId = getCurrentUserId();
+            String itemId = (String) request.get("itemId");
+            int quantity = (Integer) request.get("quantity");
+            cartService.updateQuantity(userId, itemId, quantity);
             CartResponseDTO response = buildCartResponse(userId);
             return ResponseEntity.ok(ApiResponse.success("Корзина обновлена", response));
         } catch (IllegalArgumentException e) {
@@ -87,10 +97,10 @@ public class CartController {
         }
     }
 
-    @DeleteMapping("/remove/{productId}")
-    public ResponseEntity<ApiResponse> removeFromCart(@PathVariable Long productId) {
+    @DeleteMapping("/remove/{itemId}")
+    public ResponseEntity<ApiResponse> removeFromCart(@PathVariable String itemId) {
         Long userId = getCurrentUserId();
-        cartService.removeFromCart(userId, productId);
+        cartService.removeFromCart(userId, itemId);
         CartResponseDTO response = buildCartResponse(userId);
         return ResponseEntity.ok(ApiResponse.success("Товар удален из корзины", response));
     }
@@ -104,33 +114,47 @@ public class CartController {
     }
 
     private CartResponseDTO buildCartResponse(Long userId) {
-        Map<Long, Integer> cart = cartService.getCart(userId);
+        Map<String, CartService.CartItem> cart = cartService.getCart(userId);
         List<CartItemDTO> items = new ArrayList<>();
         BigDecimal totalPrice = BigDecimal.ZERO;
         int totalItems = 0;
 
-        for (Map.Entry<Long, Integer> entry : cart.entrySet()) {
-            Long productId = entry.getKey();
-            int quantity = entry.getValue();
+        for (Map.Entry<String, CartService.CartItem> entry : cart.entrySet()) {
+            CartService.CartItem cartItem = entry.getValue();
+            int quantity = cartItem.getQuantity();
 
-            try {
-                Product product = productService.getProductById(productId);
-                if (product != null) {
-                    BigDecimal itemTotal = product.getPrice().multiply(BigDecimal.valueOf(quantity));
-                    totalPrice = totalPrice.add(itemTotal);
-                    totalItems += quantity;
+            if ("REGULAR".equals(cartItem.getType())) {
+                try {
+                    Product product = productService.getProductById(cartItem.getProductId());
+                    if (product != null) {
+                        BigDecimal itemTotal = product.getPrice().multiply(BigDecimal.valueOf(quantity));
+                        totalPrice = totalPrice.add(itemTotal);
+                        totalItems += quantity;
 
-                    CartItemDTO item = new CartItemDTO();
-                    item.setProductId(productId);
-                    item.setSku(product.getSku());
-                    item.setName(product.getName());
-                    item.setPrice(product.getPrice());
-                    item.setQuantity(quantity);
-                    item.setTotal(itemTotal);
-                    items.add(item);
+                        CartItemDTO item = new CartItemDTO();
+                        item.setProductId(cartItem.getProductId());
+                        item.setSku(product.getSku());
+                        item.setName(product.getName());
+                        item.setPrice(product.getPrice());
+                        item.setQuantity(quantity);
+                        item.setTotal(itemTotal);
+                        items.add(item);
+                    }
+                } catch (Exception e) {
+                    // Товар не найден
                 }
-            } catch (Exception e) {
-                // Товар не найден, пропускаем
+            } else if ("EXTERNAL".equals(cartItem.getType())) {
+                BigDecimal itemTotal = cartItem.getPrice().multiply(BigDecimal.valueOf(quantity));
+                totalPrice = totalPrice.add(itemTotal);
+                totalItems += quantity;
+
+                CartItemDTO item = new CartItemDTO();
+                item.setProductId(null);
+                item.setName(cartItem.getProductName() + " (под заказ)");
+                item.setPrice(cartItem.getPrice());
+                item.setQuantity(quantity);
+                item.setTotal(itemTotal);
+                items.add(item);
             }
         }
 
@@ -138,7 +162,6 @@ public class CartController {
         response.setItems(items);
         response.setTotalItems(totalItems);
         response.setTotalPrice(totalPrice);
-
         return response;
     }
 }
