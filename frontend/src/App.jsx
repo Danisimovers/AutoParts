@@ -17,6 +17,7 @@ import VinRequestForm from './components/VinRequestForm';
 import NotificationBell from './components/NotificationBell';
 import UserVinRequestChat from './pages/UserVinRequestChat';
 import Footer from './components/Footer';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // ADMIN
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -223,6 +224,7 @@ function AppRoutes() {
             <Route path="/verify" element={<VerifyEmail />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
             <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
             <Route path="/my-orders" element={isAuthenticated ? <MyOrders /> : <Navigate to="/login" />} />

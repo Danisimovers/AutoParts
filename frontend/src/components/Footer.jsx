@@ -1,9 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Truck, ShieldCheck, Clock, MapPin, Phone, Mail, Package, Headphones } from 'lucide-react';
+import { Truck, ShieldCheck, Clock, MapPin, Phone, Mail, Package } from 'lucide-react';
 
 function Footer() {
     const currentYear = new Date().getFullYear();
+
+    const openMap = () => {
+        const lat = 47.674407;
+        const lon = 40.066677;
+        window.open(`https://yandex.ru/maps/?ll=${lon},${lat}&z=18&pt=${lon},${lat}`, '_blank');
+    };
 
     return (
         <footer className="bg-gray-900 text-gray-300 mt-auto">
@@ -14,8 +20,8 @@ function Footer() {
                         <div className="flex items-center gap-3">
                             <Truck size={32} className="text-orange-500" />
                             <div>
-                                <h4 className="font-semibold text-white">Быстрая обработка</h4>
-                                <p className="text-sm text-gray-400">Отправка в течение 24 часов</p>
+                                <h4 className="font-semibold text-white">Самовывоз со склада</h4>
+                                <p className="text-sm text-gray-400">Бесплатно в любой день</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -29,7 +35,7 @@ function Footer() {
                             <Clock size={32} className="text-orange-500" />
                             <div>
                                 <h4 className="font-semibold text-white">Работаем для вас</h4>
-                                <p className="text-sm text-gray-400">Пн-Вс: 09:00 - 21:00</p>
+                                <p className="text-sm text-gray-400">Пн-Вс: 09:00 - 23:00</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -72,15 +78,21 @@ function Footer() {
                         <ul className="space-y-3 text-sm">
                             <li className="flex items-center gap-2">
                                 <Phone size={16} className="text-gray-400" />
-                                <span className="text-gray-400">8 (800) 123-45-67</span>
+                                <a href="tel:89198880127" className="text-gray-400 hover:text-orange-500 transition">8 (919) 888-01-27</a>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <Phone size={16} className="text-gray-400" />
+                                <a href="tel:89889997910" className="text-gray-400 hover:text-orange-500 transition">8 (988) 999-79-10</a>
                             </li>
                             <li className="flex items-center gap-2">
                                 <Mail size={16} className="text-gray-400" />
-                                <span className="text-gray-400">info@autoparts-shop.ru</span>
+                                <a href="mailto:kazauto1005@mail.ru" className="text-gray-400 hover:text-orange-500 transition">kazauto1005@mail.ru</a>
                             </li>
                             <li className="flex items-start gap-2">
-                                <MapPin size={16} className="text-gray-400 mt-0.5" />
-                                <span className="text-gray-400">г. Москва, ул. Автозаводская, д. 15, склад 3</span>
+                                <MapPin size={16} className="text-gray-400 mt-0.5 cursor-pointer hover:text-orange-500 transition" onClick={openMap} />
+                                <button onClick={openMap} className="text-gray-400 hover:text-orange-500 transition text-left">
+                                    Автозапчасти, Ростовская область, Октябрьский район
+                                </button>
                             </li>
                         </ul>
                     </div>
@@ -90,16 +102,11 @@ function Footer() {
                         <h3 className="text-white font-semibold mb-4">График работы</h3>
                         <ul className="space-y-2 text-sm">
                             <li className="flex justify-between">
-                                <span className="text-gray-400">Понедельник - Пятница:</span>
-                                <span className="text-gray-300">09:00 - 20:00</span>
+                                <span className="text-gray-400">Ежедневно:</span>
+                                <span className="text-gray-300">09:00 - 23:00</span>
                             </li>
                             <li className="flex justify-between">
-                                <span className="text-gray-400">Суббота:</span>
-                                <span className="text-gray-300">10:00 - 18:00</span>
-                            </li>
-                            <li className="flex justify-between">
-                                <span className="text-gray-400">Воскресенье:</span>
-                                <span className="text-gray-300">10:00 - 16:00</span>
+                                <span className="text-gray-400">Без выходных</span>
                             </li>
                         </ul>
                     </div>
@@ -114,7 +121,7 @@ function Footer() {
                             © {currentYear} AutoParts Shop. Все права защищены.
                         </p>
                         <div className="flex gap-6">
-                            <Link to="/" className="text-gray-400 hover:text-orange-500 transition">Политика конфиденциальности</Link>
+                            <Link to="/privacy-policy" className="text-gray-400 hover:text-orange-500 transition">Политика конфиденциальности</Link>
                             <Link to="/" className="text-gray-400 hover:text-orange-500 transition">Пользовательское соглашение</Link>
                         </div>
                     </div>
