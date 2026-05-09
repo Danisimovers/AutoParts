@@ -16,7 +16,7 @@ import Profile from './pages/Profile';
 import VinRequestForm from './components/VinRequestForm';
 import NotificationBell from './components/NotificationBell';
 import UserVinRequestChat from './pages/UserVinRequestChat';
-
+import Footer from './components/Footer';
 
 // ADMIN
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -29,12 +29,6 @@ import AdminManufacturers from './pages/Admin/AdminManufacturers';
 import AdminReports from './pages/Admin/AdminReports';
 import AdminExternalRequests from './pages/Admin/AdminExternalRequests';
 
-
-
-
-
-
-
 // MANAGER
 import ManagerLayout from './pages/Manager/ManagerLayout';
 import VinRequests from './pages/Manager/VinRequests';
@@ -43,13 +37,10 @@ import ManagerOrders from './pages/Manager/ManagerOrders';
 import ManagerReturns from './pages/Manager/ManagerReturns';
 import ManagerExternalRequests from './pages/Manager/ManagerExternalRequests';
 
-
-
 function NavBar({ showVinForm, setShowVinForm }) {
     const { user, logout, isAuthenticated } = useAuth();
     const [showDropdown, setShowDropdown] = useState(false);
 
-    // Закрываем меню при клике вне
     React.useEffect(() => {
         const handleClickOutside = (event) => {
             if (showDropdown && !event.target.closest('.dropdown-container')) {
@@ -69,7 +60,6 @@ function NavBar({ showVinForm, setShowVinForm }) {
             justifyContent: 'space-between',
             alignItems: 'center'
         }}>
-            {/* Левая часть - основные ссылки */}
             <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>Каталог</Link>
                 <Link to="/cart" style={{ color: 'white', textDecoration: 'none' }}>Корзина</Link>
@@ -92,7 +82,6 @@ function NavBar({ showVinForm, setShowVinForm }) {
                 )}
             </div>
 
-            {/* Правая часть - профиль */}
             <div className="dropdown-container" style={{ display: 'flex', alignItems: 'center', gap: '15px', position: 'relative' }}>
                 {isAuthenticated ? (
                     <>
@@ -147,7 +136,6 @@ function NavBar({ showVinForm, setShowVinForm }) {
                                     Личный кабинет
                                 </Link>
 
-                                {/* Менеджер-панель (для MANAGER и ADMIN) */}
                                 {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
                                     <Link
                                         to="/manager/vin-requests"
@@ -167,7 +155,6 @@ function NavBar({ showVinForm, setShowVinForm }) {
                                     </Link>
                                 )}
 
-                                {/* Админ-панель (только для ADMIN) */}
                                 {user?.role === 'ADMIN' && (
                                     <Link
                                         to="/admin/products"
@@ -254,7 +241,7 @@ function AppRoutes() {
                 <Route path="external-requests" element={<AdminExternalRequests />} />
             </Route>
 
-            {/* Менеджер-панель (доступна для MANAGER и ADMIN) */}
+            {/* Менеджер-панель */}
             <Route path="/manager" element={isAuthenticated && (user?.role === 'MANAGER' || user?.role === 'ADMIN') ? <ManagerLayout /> : <Navigate to="/" />}>
                 <Route path="vin-requests" element={<VinRequests />} />
                 <Route path="vin-requests/:id" element={<VinRequestChat />} />
@@ -272,9 +259,14 @@ function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <NavBar showVinForm={showVinForm} setShowVinForm={setShowVinForm} />
-                <AppRoutes />
-                {showVinForm && <VinRequestForm onClose={() => setShowVinForm(false)} />}
+                <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+                    <NavBar showVinForm={showVinForm} setShowVinForm={setShowVinForm} />
+                    <div style={{ flex: 1 }}>
+                        <AppRoutes />
+                    </div>
+                    {showVinForm && <VinRequestForm onClose={() => setShowVinForm(false)} />}
+                    <Footer />
+                </div>
             </AuthProvider>
         </BrowserRouter>
     );
