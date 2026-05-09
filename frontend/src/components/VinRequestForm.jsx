@@ -8,10 +8,33 @@ function VinRequestForm({ onClose, onSuccess }) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
+    // Валидация VIN номера
+    const validateVin = (vin) => {
+        const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/;
+        return vinRegex.test(vin);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setSuccess('');
+
+        // Проверка VIN
+        if (!vin.trim()) {
+            setError('VIN номер обязателен');
+            return;
+        }
+        if (!validateVin(vin)) {
+            setError('VIN номер должен содержать 17 символов (латиница и цифры, без букв I, O, Q)');
+            return;
+        }
+
+        // Проверка описания
+        if (!description.trim()) {
+            setError('Опишите, какие запчасти нужны');
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -104,19 +127,20 @@ function VinRequestForm({ onClose, onSuccess }) {
                             }}
                         />
                         <small style={{ color: '#999', fontSize: '12px', marginTop: '5px', display: 'block' }}>
-                            Пример: XTA12345678901234
+                            VIN код состоит из 17 символов (латиница и цифры, без букв I, O, Q)
                         </small>
                     </div>
 
                     <div style={{ marginBottom: '20px' }}>
                         <label style={{ display: 'block', marginBottom: '8px', color: '#555', fontWeight: '500' }}>
-                            Описание (что нужно)
+                            Описание (что нужно) *
                         </label>
                         <textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Опишите, какие запчасти нужны (необязательно)"
+                            placeholder="Опишите, какие запчасти нужны"
                             rows="4"
+                            required
                             style={{
                                 width: '100%',
                                 padding: '12px',
