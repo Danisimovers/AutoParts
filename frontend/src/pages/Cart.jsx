@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
-import { Trash2, ShoppingBag, CreditCard, X, MapPin, Wallet, Smartphone } from 'lucide-react';
+import { Trash2, ShoppingBag, CreditCard, X, MapPin, Wallet } from 'lucide-react';
 
 function Cart() {
     const [cart, setCart] = useState(null);
@@ -73,12 +73,6 @@ function Cart() {
 
     const confirmOrder = async () => {
         setIsProcessing(true);
-
-        // Имитация оплаты (для онлайн оплаты)
-        if (paymentMethod === 'online') {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            // Здесь в будущем будет реальная интеграция с платежной системой
-        }
 
         try {
             const response = await api.post('/orders', { userId });
@@ -260,7 +254,7 @@ function Cart() {
                                     <div>
                                         <h4 className="font-semibold text-gray-800">Самовывоз</h4>
                                         <p className="text-sm text-gray-600">Казачий рынок, Ростовская область, Октябрьский район, М-4 Дон, 1005-й километр</p>
-                                        <p className="text-xs text-gray-400 mt-1">Режим работы: Пн-Пт 07:00-21:00</p>
+                                        <p className="text-xs text-gray-400 mt-1">Режим работы: Пн-Вс 07:00-21:00</p>
                                     </div>
                                 </div>
                             </div>
@@ -268,7 +262,7 @@ function Cart() {
                             {/* Способ оплаты */}
                             <div>
                                 <h3 className="font-semibold text-gray-800 mb-3">Способ оплаты</h3>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 gap-3">
                                     <label className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition ${paymentMethod === 'cash' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-200'}`}>
                                         <input
                                             type="radio"
@@ -280,36 +274,11 @@ function Cart() {
                                         />
                                         <Wallet size={18} className="text-gray-500" />
                                         <div>
-                                            <p className="text-sm font-medium">Наличными</p>
-                                            <p className="text-xs text-gray-400">При получении</p>
-                                        </div>
-                                    </label>
-
-                                    <label className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition ${paymentMethod === 'online' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-200'}`}>
-                                        <input
-                                            type="radio"
-                                            name="paymentMethod"
-                                            value="online"
-                                            checked={paymentMethod === 'online'}
-                                            onChange={(e) => setPaymentMethod(e.target.value)}
-                                            className="w-4 h-4 text-orange-500"
-                                        />
-                                        <Smartphone size={18} className="text-gray-500" />
-                                        <div>
-                                            <p className="text-sm font-medium">Онлайн оплата</p>
-                                            <p className="text-xs text-gray-400">Картой или СБП</p>
+                                            <p className="text-sm font-medium">Оплата при получении</p>
+                                            <p className="text-xs text-gray-400">Наличными или картой на складе</p>
                                         </div>
                                     </label>
                                 </div>
-                            </div>
-
-                            {/* Предупреждение */}
-                            <div className="bg-blue-50 rounded-xl p-3">
-                                <p className="text-xs text-blue-600 text-center">
-                                    {paymentMethod === 'cash'
-                                        ? 'Вы сможете оплатить заказ наличными при получении на складе.'
-                                        : 'После подтверждения заказа вы будете перенаправлены на страницу оплаты.'}
-                                </p>
                             </div>
                         </div>
 
