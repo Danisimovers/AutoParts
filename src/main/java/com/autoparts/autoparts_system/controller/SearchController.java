@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -38,49 +39,72 @@ public class SearchController {
     public ResponseEntity<ApiResponse> search(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Long vehicleId,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long manufacturerId,
             @RequestParam(required = false, defaultValue = "contains") String searchType) {
 
         System.out.println("=== SEARCH ===");
         System.out.println("Query: " + query);
         System.out.println("SearchType: " + searchType);
         System.out.println("VehicleId: " + vehicleId);
+        System.out.println("CategoryId: " + categoryId);
+        System.out.println("ManufacturerId: " + manufacturerId);
 
-        List<Product> products;
+        List<Product> products = new ArrayList<>();
 
+        // 1. Поиск по тексту (если есть)
         if (query != null && !query.isEmpty()) {
             String normalizedQuery = removeHyphens(query);
             System.out.println("Normalized query: " + normalizedQuery);
 
+            String sql;
             if ("exact".equals(searchType)) {
-                // Точный поиск: регистронезависимый, без учета дефисов
-                String sql = "SELECT * FROM products WHERE REPLACE(sku, '-', '') ILIKE ? OR REPLACE(name, '-', '') ILIKE ?";
+                sql = "SELECT * FROM products WHERE REPLACE(sku, '-', '') ILIKE ? OR REPLACE(name, '-', '') ILIKE ?";
                 products = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Product.class), normalizedQuery, normalizedQuery);
-                System.out.println("Exact search, found: " + products.size());
             } else if ("startsWith".equals(searchType)) {
                 String searchPattern = normalizedQuery + "%";
-                String sql = "SELECT * FROM products WHERE REPLACE(sku, '-', '') ILIKE ? OR REPLACE(name, '-', '') ILIKE ?";
+                sql = "SELECT * FROM products WHERE REPLACE(sku, '-', '') ILIKE ? OR REPLACE(name, '-', '') ILIKE ?";
                 products = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Product.class), searchPattern, searchPattern);
-                System.out.println("StartsWith search, pattern: " + searchPattern + ", found: " + products.size());
             } else if ("name".equals(searchType)) {
                 String searchPattern = "%" + normalizedQuery + "%";
-                String sql = "SELECT * FROM products WHERE REPLACE(name, '-', '') ILIKE ?";
+                sql = "SELECT * FROM products WHERE REPLACE(name, '-', '') ILIKE ?";
                 products = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Product.class), searchPattern);
-                System.out.println("Name search, found: " + products.size());
             } else {
                 String searchPattern = "%" + normalizedQuery + "%";
-                String sql = "SELECT * FROM products WHERE REPLACE(sku, '-', '') ILIKE ? OR REPLACE(name, '-', '') ILIKE ? OR REPLACE(oem_code, '-', '') ILIKE ?";
+                sql = "SELECT * FROM products WHERE REPLACE(sku, '-', '') ILIKE ? OR REPLACE(name, '-', '') ILIKE ? OR REPLACE(oem_code, '-', '') ILIKE ?";
                 products = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Product.class), searchPattern, searchPattern, searchPattern);
-                System.out.println("Contains search, found: " + products.size());
             }
+            System.out.println("Search found: " + products.size());
         } else {
+            // Если нет поискового запроса, берем все товары
             products = productService.getAllProducts();
         }
 
+        // 2. Фильтр по категории
+        if (categoryId != null && categoryId > 0 && !products.isEmpty()) {
+            products = products.stream()
+                    .filter(p -> p.getCategoryId() != null && p.getCategoryId().equals(categoryId))
+                    .collect(Collectors.toList());
+            System.out.println("After category filter, found: " + products.size());
+        }
+
+        // 3. Фильтр по производителю
+        if (manufacturerId != null && manufacturerId > 0 && !products.isEmpty()) {
+            products = products.stream()
+                    .filter(p -> p.getManufacturerId() != null && p.getManufacturerId().equals(manufacturerId))
+                    .collect(Collectors.toList());
+            System.out.println("After manufacturer filter, found: " + products.size());
+        }
+
+        // 4. Фильтр по автомобилю (через совместимость)
         if (vehicleId != null && vehicleId > 0 && !products.isEmpty()) {
-            String vehicleSql = "SELECT p.* FROM products p JOIN product_vehicle_compat pvc ON p.id = pvc.product_id WHERE pvc.vehicle_id = ? AND p.id IN (";
             String ids = products.stream().map(p -> String.valueOf(p.getId())).collect(Collectors.joining(","));
-            vehicleSql += ids + ")";
-            products = jdbcTemplate.query(vehicleSql, new BeanPropertyRowMapper<>(Product.class), vehicleId);
+            if (!ids.isEmpty()) {
+                String vehicleSql = "SELECT p.* FROM products p JOIN product_vehicle_compat pvc ON p.id = pvc.product_id WHERE pvc.vehicle_id = ? AND p.id IN (" + ids + ")";
+                products = jdbcTemplate.query(vehicleSql, new BeanPropertyRowMapper<>(Product.class), vehicleId);
+            } else {
+                products = new ArrayList<>();
+            }
             System.out.println("After vehicle filter, found: " + products.size());
         }
 

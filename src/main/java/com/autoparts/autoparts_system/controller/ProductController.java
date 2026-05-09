@@ -134,6 +134,65 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/page")
+    public ResponseEntity<ApiResponse> getProductsPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long manufacturerId,
+            @RequestParam(required = false) Long vehicleId) {
+
+        int offset = page * size;
+
+        // Базовый SQL с условиями
+        StringBuilder sqlBuilder = new StringBuilder("SELECT * FROM products WHERE 1=1");
+        StringBuilder countSqlBuilder = new StringBuilder("SELECT COUNT(*) FROM products WHERE 1=1");
+
+        // Добавляем фильтры
+        if (categoryId != null && categoryId > 0) {
+            sqlBuilder.append(" AND category_id = ").append(categoryId);
+            countSqlBuilder.append(" AND category_id = ").append(categoryId);
+        }
+
+        if (manufacturerId != null && manufacturerId > 0) {
+            sqlBuilder.append(" AND manufacturer_id = ").append(manufacturerId);
+            countSqlBuilder.append(" AND manufacturer_id = ").append(manufacturerId);
+        }
+
+        // Если есть фильтр по автомобилю, нужно JOIN с таблицей совместимости
+        List<Product> products;
+        int total;
+
+        if (vehicleId != null && vehicleId > 0) {
+            String sqlWithVehicle = "SELECT p.* FROM products p " +
+                    "JOIN product_vehicle_compat pvc ON p.id = pvc.product_id " +
+                    "WHERE pvc.vehicle_id = ? " +
+                    (categoryId != null && categoryId > 0 ? " AND p.category_id = " + categoryId : "") +
+                    (manufacturerId != null && manufacturerId > 0 ? " AND p.manufacturer_id = " + manufacturerId : "") +
+                    " LIMIT ? OFFSET ?";
+            products = jdbcTemplate.query(sqlWithVehicle, new BeanPropertyRowMapper<>(Product.class), vehicleId, size, offset);
+
+            String countWithVehicle = "SELECT COUNT(DISTINCT p.id) FROM products p " +
+                    "JOIN product_vehicle_compat pvc ON p.id = pvc.product_id " +
+                    "WHERE pvc.vehicle_id = ? " +
+                    (categoryId != null && categoryId > 0 ? " AND p.category_id = " + categoryId : "") +
+                    (manufacturerId != null && manufacturerId > 0 ? " AND p.manufacturer_id = " + manufacturerId : "");
+            total = jdbcTemplate.queryForObject(countWithVehicle, Integer.class, vehicleId);
+        } else {
+            sqlBuilder.append(" LIMIT ? OFFSET ?");
+            products = jdbcTemplate.query(sqlBuilder.toString(), new BeanPropertyRowMapper<>(Product.class), size, offset);
+            total = jdbcTemplate.queryForObject(countSqlBuilder.toString(), Integer.class);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("products", products.stream().map(this::convertToDTO).collect(Collectors.toList()));
+        response.put("currentPage", page);
+        response.put("totalItems", total);
+        response.put("totalPages", (int) Math.ceil((double) total / size));
+
+        return ResponseEntity.ok(ApiResponse.success("Товары загружены", response));
+    }
+
     private ProductDTO convertToDTO(Product product) {
         ProductDTO dto = new ProductDTO();
         dto.setId(product.getId());
@@ -200,26 +259,5 @@ public class ProductController {
         dto.setCompatibleVehicles(vehicles);
 
         return dto;
-    }
-
-    @GetMapping("/page")
-    public ResponseEntity<ApiResponse> getProductsPage(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size) {
-
-        int offset = page * size;
-        String sql = "SELECT * FROM products LIMIT ? OFFSET ?";
-        List<Product> products = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Product.class), size, offset);
-
-        String countSql = "SELECT COUNT(*) FROM products";
-        int total = jdbcTemplate.queryForObject(countSql, Integer.class);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("products", products.stream().map(this::convertToDTO).collect(Collectors.toList()));
-        response.put("currentPage", page);
-        response.put("totalItems", total);
-        response.put("totalPages", (int) Math.ceil((double) total / size));
-
-        return ResponseEntity.ok(ApiResponse.success("Товары загружены", response));
     }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import ProductCard from '../components/ProductCard';
+import { Search, Filter, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 function Catalog() {
     const [externalProducts, setExternalProducts] = useState([]);
@@ -8,9 +9,14 @@ function Catalog() {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchType, setSearchType] = useState('contains'); // contains, startsWith, exact, name
+    const [searchType, setSearchType] = useState('startsWith');
     const [vehicles, setVehicles] = useState([]);
     const [selectedVehicle, setSelectedVehicle] = useState('');
+    const [categories, setCategories] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [manufacturers, setManufacturers] = useState([]);
+    const [selectedManufacturer, setSelectedManufacturer] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
 
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -20,12 +26,19 @@ function Catalog() {
     useEffect(() => {
         loadProducts();
         loadVehicles();
-    }, [currentPage]);
+        loadCategories();
+        loadManufacturers();
+    }, [currentPage, selectedCategory, selectedManufacturer]);
 
     const loadProducts = async () => {
         setLoading(true);
         try {
-            const response = await api.get(`/products/page?page=${currentPage}&size=${pageSize}`);
+            let url = `/products/page?page=${currentPage}&size=${pageSize}`;
+            if (selectedCategory) url += `&categoryId=${selectedCategory}`;
+            if (selectedManufacturer) url += `&manufacturerId=${selectedManufacturer}`;
+            if (selectedVehicle) url += `&vehicleId=${selectedVehicle}`;
+
+            const response = await api.get(url);
             if (response.data.success) {
                 const data = response.data.data;
                 setProducts(data.products);
@@ -47,6 +60,28 @@ function Catalog() {
             }
         } catch (error) {
             console.error('Ошибка загрузки автомобилей:', error);
+        }
+    };
+
+    const loadCategories = async () => {
+        try {
+            const response = await api.get('/categories');
+            if (response.data.success) {
+                setCategories(response.data.data);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки категорий:', error);
+        }
+    };
+
+    const loadManufacturers = async () => {
+        try {
+            const response = await api.get('/manufacturers');
+            if (response.data.success) {
+                setManufacturers(response.data.data);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки производителей:', error);
         }
     };
 
@@ -74,26 +109,21 @@ function Catalog() {
             let url = '/search';
             const params = [];
 
-            // Поиск по артикулу/названию с учетом типа поиска
             if (searchQuery) {
-                let query = searchQuery;
-                if (searchType === 'startsWith') {
-                    query = `${searchQuery}`;
-                } else if (searchType === 'exact') {
-                    query = `${searchQuery}`;
-                }
-                params.push(`query=${encodeURIComponent(query)}`);
+                params.push(`query=${encodeURIComponent(searchQuery)}`);
                 params.push(`searchType=${searchType}`);
             }
 
             if (selectedVehicle) params.push(`vehicleId=${selectedVehicle}`);
+            if (selectedCategory) params.push(`categoryId=${selectedCategory}`);
+            if (selectedManufacturer) params.push(`manufacturerId=${selectedManufacturer}`);
+
             if (params.length > 0) url += '?' + params.join('&');
 
             const response = await api.get(url);
             if (response.data.success) {
                 setProducts(response.data.data.products || []);
                 setTotalPages(1);
-                setTotalItems(products.length);
             }
         } catch (error) {
             console.error('Ошибка поиска:', error);
@@ -138,188 +168,319 @@ function Catalog() {
         }
     };
 
+    const clearFilters = () => {
+        setSelectedCategory('');
+        setSelectedManufacturer('');
+        setSelectedVehicle('');
+    };
+
+    const applyFilters = () => {
+        setCurrentPage(0);
+        loadProducts();
+        setShowFilters(false);
+    };
+
     const goToPage = (page) => {
         if (page >= 0 && page < totalPages) {
             setCurrentPage(page);
         }
     };
 
-    const getSearchTypeLabel = () => {
-        switch(searchType) {
-            case 'contains': return 'Похожие номера';
-            case 'startsWith': return 'Начинается с номера';
-            case 'exact': return 'Точный номер';
-            case 'name': return 'По названию';
-            default: return 'Поиск';
-        }
-    };
-
     const getPlaceholder = () => {
         switch(searchType) {
-            case 'contains': return 'Например: 0357274 или масло';
-            case 'startsWith': return 'Начинается с... Например: 0357';
-            case 'exact': return 'Точный артикул... Например: D-OIL-001';
+            case 'startsWith': return 'Артикул начинается с... например: 0357';
+            case 'exact': return 'Точный артикул... например: D-OIL-001';
             case 'name': return 'Название товара...';
             default: return 'Поиск...';
         }
+    };
+
+    const getFilterCount = () => {
+        let count = 0;
+        if (selectedCategory) count++;
+        if (selectedManufacturer) count++;
+        if (selectedVehicle) count++;
+        return count;
+    };
+
+    const getActiveFilterName = () => {
+        if (selectedCategory) {
+            const cat = categories.find(c => c.id == selectedCategory);
+            if (cat) return `Категория: ${cat.name}`;
+        }
+        if (selectedManufacturer) {
+            const man = manufacturers.find(m => m.id == selectedManufacturer);
+            if (man) return `Производитель: ${man.name}`;
+        }
+        if (selectedVehicle) {
+            const veh = vehicles.find(v => v.id == selectedVehicle);
+            if (veh) return `Автомобиль: ${veh.make} ${veh.model}`;
+        }
+        return null;
     };
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">Каталог автозапчастей</h1>
 
-            {/* Поисковая строка с типами поиска */}
-            <div className="mb-8">
-                <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex flex-col lg:flex-row gap-6">
+                {/* Левая панель */}
+                <div className="w-full lg:w-80 flex-shrink-0">
+                    {/* Кнопка фильтров */}
                     <button
-                        onClick={() => setSearchType('startsWith')}
-                        className={`px-4 py-2 rounded-lg transition ${searchType === 'startsWith' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                        onClick={() => setShowFilters(!showFilters)}
+                        className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-orange-300 hover:shadow-md transition"
                     >
-                        Начинается с номера
+                        <div className="flex items-center gap-2">
+                            <Filter size={18} className="text-gray-500" />
+                            <span className="text-sm font-medium text-gray-700">Фильтры</span>
+                            {getFilterCount() > 0 && (
+                                <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">
+                                    {getFilterCount()}
+                                </span>
+                            )}
+                        </div>
+                        {showFilters ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
                     </button>
-                    <button
-                        onClick={() => setSearchType('exact')}
-                        className={`px-4 py-2 rounded-lg transition ${searchType === 'exact' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                    >
-                        Точный номер
-                    </button>
-                    <button
-                        onClick={() => setSearchType('name')}
-                        className={`px-4 py-2 rounded-lg transition ${searchType === 'name' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                    >
-                        По названию
-                    </button>
+
+                    {/* Активные фильтры */}
+                    {getFilterCount() > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <span className="text-xs text-gray-500">Активные фильтры:</span>
+                            {selectedCategory && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                    {categories.find(c => c.id == selectedCategory)?.name}
+                                    <X size={12} className="cursor-pointer hover:text-orange-900" onClick={() => setSelectedCategory('')} />
+                                </span>
+                            )}
+                            {selectedManufacturer && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                    {manufacturers.find(m => m.id == selectedManufacturer)?.name}
+                                    <X size={12} className="cursor-pointer hover:text-orange-900" onClick={() => setSelectedManufacturer('')} />
+                                </span>
+                            )}
+                            {selectedVehicle && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                    {vehicles.find(v => v.id == selectedVehicle)?.make} {vehicles.find(v => v.id == selectedVehicle)?.model}
+                                    <X size={12} className="cursor-pointer hover:text-orange-900" onClick={() => setSelectedVehicle('')} />
+                                </span>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Панель фильтров */}
+                    {showFilters && (
+                        <div className="mt-3 bg-white rounded-xl border border-gray-100 shadow-lg p-5">
+                            <div className="space-y-5">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Категория</label>
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-gray-50"
+                                    >
+                                        <option value="">Все категории</option>
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Производитель</label>
+                                    <select
+                                        value={selectedManufacturer}
+                                        onChange={(e) => setSelectedManufacturer(e.target.value)}
+                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-gray-50"
+                                    >
+                                        <option value="">Все производители</option>
+                                        {manufacturers.map(man => (
+                                            <option key={man.id} value={man.id}>{man.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Автомобиль</label>
+                                    <select
+                                        value={selectedVehicle}
+                                        onChange={(e) => setSelectedVehicle(e.target.value)}
+                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-gray-50"
+                                    >
+                                        <option value="">Все автомобили</option>
+                                        {vehicles.map(vehicle => (
+                                            <option key={vehicle.id} value={vehicle.id}>
+                                                {vehicle.make} {vehicle.model}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        onClick={clearFilters}
+                                        className="flex-1 px-3 py-2 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition text-sm font-medium"
+                                    >
+                                        Сбросить
+                                    </button>
+                                    <button
+                                        onClick={applyFilters}
+                                        className="flex-1 px-3 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition text-sm font-medium"
+                                    >
+                                        Применить
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                <div className="flex gap-3">
-                    <input
-                        type="text"
-                        placeholder={getPlaceholder()}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-lg"
-                    />
-                    <button
-                        onClick={handleSearch}
-                        className="px-8 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition font-medium text-lg"
-                    >
-                        Найти
-                    </button>
-                </div>
+                {/* Правая часть */}
+                <div className="flex-1">
+                    {/* Поисковая строка */}
+                    <div className="mb-8">
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            <button
+                                onClick={() => setSearchType('startsWith')}
+                                className={`px-4 py-1.5 rounded-full text-sm transition ${
+                                    searchType === 'startsWith'
+                                        ? 'bg-orange-500 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                                С начала номера
+                            </button>
+                            <button
+                                onClick={() => setSearchType('exact')}
+                                className={`px-4 py-1.5 rounded-full text-sm transition ${
+                                    searchType === 'exact'
+                                        ? 'bg-orange-500 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                                Точный номер
+                            </button>
+                            <button
+                                onClick={() => setSearchType('name')}
+                                className={`px-4 py-1.5 rounded-full text-sm transition ${
+                                    searchType === 'name'
+                                        ? 'bg-orange-500 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                                По названию
+                            </button>
+                        </div>
 
-                <div className="mt-3">
-                    <select
-                        value={selectedVehicle}
-                        onChange={(e) => setSelectedVehicle(e.target.value)}
-                        className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                        <option value="">Все автомобили</option>
-                        {vehicles.map(vehicle => (
-                            <option key={vehicle.id} value={vehicle.id}>
-                                {vehicle.make} {vehicle.model} {vehicle.generation ? `(${vehicle.generation})` : ''}
-                            </option>
-                        ))}
-                    </select>
-                    {selectedVehicle && (
-                        <button
-                            onClick={() => setSelectedVehicle('')}
-                            className="ml-2 text-sm text-orange-500 hover:text-orange-600"
-                        >
-                            Сбросить фильтр
-                        </button>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder={getPlaceholder()}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                className="w-full pl-12 pr-28 py-3.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-50"
+                            />
+                            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                            <button
+                                onClick={handleSearch}
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition text-sm font-medium"
+                            >
+                                Найти
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Результаты */}
+                    {loading ? (
+                        <div className="flex justify-center items-center h-64">
+                            <div className="text-gray-400">Загрузка...</div>
+                        </div>
+                    ) : products.length === 0 ? (
+                        <div className="text-center text-gray-400 py-12">
+                            <p className="text-lg mb-2">Товары не найдены</p>
+                            {searchQuery && (
+                                <p className="text-sm">Попробуйте изменить поисковый запрос или тип поиска</p>
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {products.map(product => (
+                                    <ProductCard
+                                        key={product.id}
+                                        product={product}
+                                        onAddToCart={addToCart}
+                                    />
+                                ))}
+                            </div>
+
+                            {totalPages > 1 && (
+                                <div className="flex justify-center gap-3 mt-10">
+                                    <button
+                                        onClick={() => goToPage(currentPage - 1)}
+                                        disabled={currentPage === 0}
+                                        className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 transition text-sm"
+                                    >
+                                        ← Назад
+                                    </button>
+                                    <span className="px-4 py-2 text-gray-500 text-sm">
+                                        {currentPage + 1} / {totalPages}
+                                    </span>
+                                    <button
+                                        onClick={() => goToPage(currentPage + 1)}
+                                        disabled={currentPage >= totalPages - 1}
+                                        className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 transition text-sm"
+                                    >
+                                        Вперед →
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* Товары от поставщиков */}
+                    {(externalProducts.length > 0 || loadingExternal) && (
+                        <div className="mt-12 pt-6 border-t border-gray-100">
+                            <h2 className="text-lg font-semibold text-orange-500 mb-3">Товары от поставщиков</h2>
+                            <div className="bg-orange-50/50 rounded-xl p-4 border border-orange-100">
+                                <p className="text-sm text-gray-500 mb-3">
+                                    Эти товары поставляются от наших партнеров. Срок доставки 3-7 дней.
+                                </p>
+                                {loadingExternal ? (
+                                    <div className="text-center py-6 text-gray-400">Загрузка...</div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {externalProducts.map(product => (
+                                            <div key={product.id} className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+                                                <div className="flex justify-between items-start flex-wrap gap-4">
+                                                    <div className="flex-1">
+                                                        <p className="font-semibold text-gray-800">{product.name}</p>
+                                                        <p className="text-sm text-gray-500 mt-1">
+                                                            {product.producer} | {product.factoryNumber}
+                                                        </p>
+                                                        <p className="text-xs text-gray-400">Поставщик: {product.supplierName}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-xl font-bold text-orange-500">{product.price} ₽</p>
+                                                        <p className="text-xs text-gray-500">{product.delivery}</p>
+                                                        <button
+                                                            onClick={() => addExternalToCart(product)}
+                                                            className="mt-2 bg-orange-500 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-orange-600 transition"
+                                                        >
+                                                            В корзину
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
-
-            {loading ? (
-                <div className="flex justify-center items-center h-64">
-                    <div className="text-gray-500">Загрузка...</div>
-                </div>
-            ) : products.length === 0 ? (
-                <div className="text-center text-gray-500 py-10">
-                    Товары не найдены
-                    {searchQuery && (
-                        <div className="mt-2 text-sm">
-                            Попробуйте изменить поисковый запрос или тип поиска
-                        </div>
-                    )}
-                </div>
-            ) : (
-                <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {products.map(product => (
-                            <ProductCard
-                                key={product.id}
-                                product={product}
-                                onAddToCart={addToCart}
-                            />
-                        ))}
-                    </div>
-
-                    {totalPages > 1 && (
-                        <div className="flex justify-center gap-3 mt-8 pt-5">
-                            <button
-                                onClick={() => goToPage(currentPage - 1)}
-                                disabled={currentPage === 0}
-                                className="px-4 py-2 bg-orange-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-orange-600 transition"
-                            >
-                                ← Назад
-                            </button>
-                            <span className="px-4 py-2 text-gray-600">
-                                Страница {currentPage + 1} из {totalPages}
-                            </span>
-                            <button
-                                onClick={() => goToPage(currentPage + 1)}
-                                disabled={currentPage >= totalPages - 1}
-                                className="px-4 py-2 bg-orange-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-orange-600 transition"
-                            >
-                                Вперед →
-                            </button>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {(externalProducts.length > 0 || loadingExternal) && (
-                <div className="mt-12 border-t pt-8">
-                    <h2 className="text-xl font-bold mb-4 text-blue-600">Товары от поставщиков (под заказ)</h2>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                        <p className="text-sm text-gray-600 mb-3">
-                            Эти товары поставляются от наших партнеров. Срок доставки 3-7 дней.
-                        </p>
-                        {loadingExternal ? (
-                            <div className="text-center py-8 text-gray-500">Загрузка...</div>
-                        ) : (
-                            <div className="space-y-3">
-                                {externalProducts.map(product => (
-                                    <div key={product.id} className="bg-white p-4 rounded-lg shadow">
-                                        <div className="flex justify-between items-start flex-wrap gap-4">
-                                            <div className="flex-1">
-                                                <p className="font-bold text-lg">{product.name}</p>
-                                                <p className="text-sm text-gray-500 mt-1">
-                                                    Производитель: {product.producer} | Артикул: {product.factoryNumber}
-                                                </p>
-                                                <p className="text-xs text-gray-400 mt-1">Поставщик: {product.supplierName}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-xl font-bold text-orange-500">{product.price} ₽</p>
-                                                <p className="text-xs text-gray-500">Срок: {product.delivery}</p>
-                                                <button
-                                                    onClick={() => addExternalToCart(product)}
-                                                    className="mt-2 bg-orange-500 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-orange-600 transition"
-                                                >
-                                                    В корзину
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
