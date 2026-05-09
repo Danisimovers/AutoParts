@@ -122,7 +122,7 @@ function Footer() {
                         </p>
                         <div className="flex gap-6">
                             <Link to="/privacy-policy" className="text-gray-400 hover:text-orange-500 transition">Политика конфиденциальности</Link>
-                            <Link to="/" className="text-gray-400 hover:text-orange-500 transition">Пользовательское соглашение</Link>
+                            <Link to="/terms" className="text-gray-400 hover:text-orange-500 transition">Пользовательское соглашение</Link>
                         </div>
                     </div>
                 </div>
