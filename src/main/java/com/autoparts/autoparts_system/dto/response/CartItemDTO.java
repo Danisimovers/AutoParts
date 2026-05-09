@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CartItemDTO {
+    private String itemId;
     private Long productId;
     private String sku;
     private String name;

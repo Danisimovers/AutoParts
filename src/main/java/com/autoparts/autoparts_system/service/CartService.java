@@ -26,7 +26,6 @@ public class CartService {
         private int quantity;
         private String type; // "REGULAR" или "EXTERNAL"
 
-        // Геттеры и сеттеры
         public String getTempId() { return tempId; }
         public void setTempId(String tempId) { this.tempId = tempId; }
         public Long getProductId() { return productId; }

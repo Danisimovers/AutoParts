@@ -121,6 +121,7 @@ public class CartController {
 
         for (Map.Entry<String, CartService.CartItem> entry : cart.entrySet()) {
             CartService.CartItem cartItem = entry.getValue();
+            String itemId = entry.getKey();
             int quantity = cartItem.getQuantity();
 
             if ("REGULAR".equals(cartItem.getType())) {
@@ -132,6 +133,7 @@ public class CartController {
                         totalItems += quantity;
 
                         CartItemDTO item = new CartItemDTO();
+                        item.setItemId(itemId);
                         item.setProductId(cartItem.getProductId());
                         item.setSku(product.getSku());
                         item.setName(product.getName());
@@ -149,8 +151,9 @@ public class CartController {
                 totalItems += quantity;
 
                 CartItemDTO item = new CartItemDTO();
+                item.setItemId(itemId);
                 item.setProductId(null);
-                item.setName(cartItem.getProductName() + " (под заказ)");
+                item.setName(cartItem.getProductName() + (cartItem.getType().equals("EXTERNAL") ? " (под заказ)" : ""));
                 item.setPrice(cartItem.getPrice());
                 item.setQuantity(quantity);
                 item.setTotal(itemTotal);
