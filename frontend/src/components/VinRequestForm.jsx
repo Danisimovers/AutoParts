@@ -58,57 +58,27 @@ function VinRequestForm({ onClose, onSuccess }) {
     };
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000
-        }}>
-            <div style={{
-                backgroundColor: '#fff',
-                padding: '30px',
-                borderRadius: '12px',
-                maxWidth: '500px',
-                width: '90%',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
-            }}>
-                <h2 style={{ marginBottom: '20px', color: '#333', fontSize: '24px' }}>Запрос на подбор запчастей</h2>
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]">
+            <div className="bg-white p-[30px] rounded-xl max-w-[500px] w-[90%] shadow-xl">
+                <h2 className="mb-5 text-[#333] text-2xl">
+                    Запрос на подбор запчастей
+                </h2>
 
                 {error && (
-                    <div style={{
-                        backgroundColor: '#ffebee',
-                        color: '#c62828',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        marginBottom: '15px',
-                        fontSize: '14px'
-                    }}>
+                    <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">
                         {error}
                     </div>
                 )}
 
                 {success && (
-                    <div style={{
-                        backgroundColor: '#e8f5e9',
-                        color: '#2e7d32',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        marginBottom: '15px',
-                        fontSize: '14px'
-                    }}>
+                    <div className="bg-green-50 text-green-700 p-3 rounded-lg mb-4 text-sm">
                         {success}
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', color: '#555', fontWeight: '500' }}>
+                    <div className="mb-4">
+                        <label className="block mb-2 text-[#555] font-medium">
                             VIN номер автомобиля *
                         </label>
                         <input
@@ -117,22 +87,15 @@ function VinRequestForm({ onClose, onSuccess }) {
                             onChange={(e) => setVin(e.target.value.toUpperCase())}
                             placeholder="XTA12345678901234"
                             required
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                border: '1px solid #ddd',
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                fontFamily: 'monospace'
-                            }}
+                            className="w-full p-3 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         />
-                        <small style={{ color: '#999', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                        <small className="text-gray-400 text-xs mt-1 block">
                             VIN код состоит из 17 символов (латиница и цифры, без букв I, O, Q)
                         </small>
                     </div>
 
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', color: '#555', fontWeight: '500' }}>
+                    <div className="mb-5">
+                        <label className="block mb-2 text-[#555] font-medium">
                             Описание (что нужно) *
                         </label>
                         <textarea
@@ -141,60 +104,26 @@ function VinRequestForm({ onClose, onSuccess }) {
                             placeholder="Опишите, какие запчасти нужны"
                             rows="4"
                             required
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                border: '1px solid #ddd',
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                fontFamily: 'Arial, sans-serif'
-                            }}
+                            className="w-full p-3 border border-gray-300 rounded-lg text-sm font-sans focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-y"
                         />
                     </div>
 
-                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                    <div className="flex gap-3 justify-end">
                         <button
                             type="button"
                             onClick={onClose}
-                            style={{
-                                padding: '10px 20px',
-                                backgroundColor: '#f5f5f5',
-                                color: '#666',
-                                border: '1px solid #ddd',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                transition: '0.3s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = '#eee';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = '#f5f5f5';
-                            }}
+                            className="px-5 py-2.5 bg-gray-100 text-gray-600 border border-gray-300 rounded-lg cursor-pointer text-sm transition-colors duration-300 hover:bg-gray-200"
                         >
                             Отмена
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            style={{
-                                padding: '10px 24px',
-                                backgroundColor: '#e67e22',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                transition: '0.3s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = '#d35400';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = '#e67e22';
-                            }}
+                            className={`
+                                px-6 py-2.5 bg-orange-500 text-white border-none rounded-lg 
+                                text-sm font-medium transition-colors duration-300
+                                ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-600 cursor-pointer'}
+                            `}
                         >
                             {loading ? 'Отправка...' : 'Отправить'}
                         </button>

@@ -30,75 +30,61 @@ function ForgotPassword() {
     };
 
     return (
-        <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px' }}>
-            <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>Восстановление пароля</h1>
+        <div className="max-w-[400px] mx-auto my-[50px] p-5">
+            <h1 className="text-center mb-[30px] text-2xl font-bold text-gray-800">
+                Восстановление пароля
+            </h1>
 
             {error && (
-                <div style={{
-                    backgroundColor: '#ffebee',
-                    color: '#c62828',
-                    padding: '10px',
-                    borderRadius: '4px',
-                    marginBottom: '20px'
-                }}>
+                <div className="bg-red-50 text-red-700 p-2.5 rounded mb-5 text-sm">
                     {error}
                 </div>
             )}
 
             {success && (
-                <div style={{
-                    backgroundColor: '#d4edda',
-                    color: '#155724',
-                    padding: '15px',
-                    borderRadius: '8px',
-                    marginBottom: '20px',
-                    textAlign: 'center'
-                }}>
-                    <strong>{success}</strong>
-                    <p style={{ marginTop: '10px', fontSize: '14px' }}>
+                <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-5 text-center">
+                    <strong className="block mb-2">{success}</strong>
+                    <p className="mt-2.5 text-sm">
                         Проверьте почту и перейдите по ссылке для сброса пароля.
                     </p>
                 </div>
             )}
 
             <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>Email</label>
+                <div className="mb-5">
+                    <label className="block mb-1.5 text-sm font-medium text-gray-700">
+                        Email
+                    </label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         placeholder="Введите email, указанный при регистрации"
-                        style={{
-                            width: '100%',
-                            padding: '10px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px'
-                        }}
+                        className="w-full p-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
                     />
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        backgroundColor: '#e67e22',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '16px',
-                        cursor: 'pointer'
-                    }}
+                    className={`
+                        w-full py-3 bg-orange-500 text-white border-none rounded
+                        text-base font-medium transition-colors duration-200
+                        ${loading
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:bg-orange-600 cursor-pointer'
+                    }
+                    `}
                 >
                     {loading ? 'Отправка...' : 'Отправить ссылку для сброса'}
                 </button>
             </form>
 
-            <p style={{ textAlign: 'center', marginTop: '20px' }}>
-                <Link to="/login">Вернуться ко входу</Link>
+            <p className="text-center mt-5">
+                <Link to="/login" className="text-orange-500 hover:text-orange-600 transition">
+                    Вернуться ко входу
+                </Link>
             </p>
         </div>
     );

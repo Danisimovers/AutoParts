@@ -11,58 +11,33 @@ function ProductCard({ product, onAddToCart }) {
     return (
         <div
             onClick={handleCardClick}
-            style={{
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                padding: '16px',
-                margin: '8px',
-                width: '250px',
-                display: 'flex',
-                flexDirection: 'column',
-                verticalAlign: 'top',
-                cursor: 'pointer',
-                backgroundColor: '#fff',
-                transition: 'box-shadow 0.2s',
-                height: '100%',
-                minHeight: '280px'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
+            className={`
+                border border-gray-300 rounded-lg p-4 m-2 w-[250px] 
+                flex flex-col bg-white cursor-pointer 
+                transition-shadow duration-200 h-full min-h-[280px]
+                hover:shadow-md
+            `}
         >
-            <h3 style={{
-                fontSize: '18px',
-                margin: '0 0 8px 0',
-                minHeight: '48px'
-            }}>
+            <h3 className="text-lg mb-2 min-h-[48px] m-0">
                 {product.name}
             </h3>
 
-            <p style={{
-                color: '#666',
-                fontSize: '14px',
-                margin: '4px 0'
-            }}>
+            <p className="text-gray-500 text-sm my-1">
                 Артикул: {product.sku}
             </p>
 
-            <p style={{
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: '#e67e22',
-                margin: '8px 0'
-            }}>
+            <p className="text-xl font-bold text-[#e67e22] my-2">
                 {product.price.toLocaleString()} ₽
             </p>
 
-            <p style={{
-                fontSize: '12px',
-                color: product.stock > 0 ? 'green' : 'red',
-                margin: '4px 0'
-            }}>
+            <p className={`
+                text-xs my-1
+                ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}
+            `}>
                 {product.stock > 0 ? `В наличии: ${product.stock} шт` : 'Нет в наличии'}
             </p>
 
-            <div style={{ flex: 1 }} /> {/* Это растягивает пространство и прижимает кнопку вниз */}
+            <div className="flex-1" />
 
             <button
                 onClick={(e) => {
@@ -70,30 +45,14 @@ function ProductCard({ product, onAddToCart }) {
                     onAddToCart(product);
                 }}
                 disabled={product.stock === 0}
-                style={{
-                    backgroundColor: '#e67e22',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 16px',
-                    borderRadius: '6px',
-                    cursor: product.stock > 0 ? 'pointer' : 'not-allowed',
-                    width: '100%',
-                    marginTop: '12px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    transition: 'background-color 0.2s',
-                    opacity: product.stock === 0 ? 0.5 : 1
-                }}
-                onMouseEnter={(e) => {
-                    if (product.stock > 0) {
-                        e.currentTarget.style.backgroundColor = '#d35400';
-                    }
-                }}
-                onMouseLeave={(e) => {
-                    if (product.stock > 0) {
-                        e.currentTarget.style.backgroundColor = '#e67e22';
-                    }
-                }}
+                className={`
+                    w-full mt-3 py-2.5 px-4 rounded-md text-sm font-medium
+                    text-white border-none transition-colors duration-200
+                    ${product.stock > 0
+                    ? 'bg-[#e67e22] hover:bg-[#d35400] cursor-pointer'
+                    : 'bg-[#e67e22] cursor-not-allowed opacity-50'
+                }
+                `}
             >
                 {product.stock > 0 ? 'В корзину' : 'Нет в наличии'}
             </button>

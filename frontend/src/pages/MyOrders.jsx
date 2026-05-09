@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
-import { Package, Calendar, CreditCard, RotateCcw, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, Calendar, CreditCard, RotateCcw, X, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 
 function MyOrders() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showReturnModal, setShowReturnModal] = useState(false);
@@ -147,7 +148,7 @@ function MyOrders() {
                 <div className="space-y-4">
                     {orders.map(order => (
                         <div key={order.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                            {/* Шапка заказа - кликабельная */}
+                            {/* Шапка заказа */}
                             <div
                                 className="px-6 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition"
                                 onClick={() => toggleOrder(order.id)}
@@ -160,7 +161,13 @@ function MyOrders() {
                                             </div>
                                             <div>
                                                 <p className="text-sm text-gray-500">Заказ №</p>
-                                                <p className="font-bold text-gray-800 text-lg">{order.id}</p>
+                                                <Link
+                                                    to={`/order/${order.id}`}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="font-bold text-gray-800 text-lg hover:text-orange-500 transition"
+                                                >
+                                                    {order.id}
+                                                </Link>
                                             </div>
                                         </div>
 
@@ -278,10 +285,17 @@ function MyOrders() {
                                                     </div>
                                                 </td>
                                                 <td colSpan="2" className="px-4 py-5">
-                                                    <div className="text-right">
+                                                    <div className="flex items-center justify-end gap-4">
                                                             <span className="text-2xl font-bold text-orange-600">
                                                                 {order.total.toLocaleString()} ₽
                                                             </span>
+                                                        <button
+                                                            onClick={() => navigate(`/order/${order.id}`)}
+                                                            className="flex items-center gap-2 px-4 py-2 text-sm bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-all duration-200"
+                                                        >
+                                                            <Eye size={14} />
+                                                            Подробнее
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>

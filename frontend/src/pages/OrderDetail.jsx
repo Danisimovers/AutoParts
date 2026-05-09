@@ -43,61 +43,108 @@ function OrderDetail() {
         }
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>Загрузка...</div>;
-    if (!order) return <div style={{ padding: '20px' }}>Заказ не найден</div>;
+    const getStatusColor = (status) => {
+        switch(status) {
+            case 'CREATED': return 'bg-yellow-100 text-yellow-800';
+            case 'PAID': return 'bg-blue-100 text-blue-800';
+            case 'SHIPPED': return 'bg-purple-100 text-purple-800';
+            case 'DELIVERED': return 'bg-green-100 text-green-800';
+            case 'CANCELLED': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    if (loading) return (
+        <div className="p-5 text-center text-gray-500">
+            Загрузка...
+        </div>
+    );
+
+    if (!order) return (
+        <div className="p-5 text-center text-gray-500">
+            Заказ не найден
+        </div>
+    );
 
     return (
-        <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-            <button onClick={() => navigate('/my-orders')} style={{ marginBottom: '20px' }}>
+        <div className="p-5 max-w-[800px] mx-auto">
+            <button
+                onClick={() => navigate('/my-orders')}
+                className="mb-5 px-4 py-2 text-orange-600 hover:text-orange-700 transition flex items-center gap-2"
+            >
                 ← Назад к заказам
             </button>
 
-            <h1>Заказ #{order.id}</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-5">
+                Заказ #{order.id}
+            </h1>
 
-            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
-                <p><strong>Дата:</strong> {new Date(order.createdAt).toLocaleString('ru-RU')}</p>
-                <p><strong>Статус:</strong>
-                    <span style={{
-                        backgroundColor: '#e67e22',
-                        color: 'white',
-                        padding: '4px 12px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        marginLeft: '10px'
-                    }}>
+            <div className="mb-5 p-4 bg-gray-50 rounded-lg">
+                <p className="mb-2 text-gray-700">
+                    <strong className="font-semibold">Дата:</strong>{' '}
+                    {new Date(order.createdAt).toLocaleString('ru-RU')}
+                </p>
+                <p className="mb-2 text-gray-700">
+                    <strong className="font-semibold">Статус:</strong>
+                    <span className={`ml-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                         {getStatusText(order.status)}
                     </span>
                 </p>
-                <p><strong>Общая сумма:</strong> <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#e67e22' }}>{order.total} ₽</span></p>
+                <p className="text-gray-700">
+                    <strong className="font-semibold">Общая сумма:</strong>{' '}
+                    <span className="text-2xl font-bold text-orange-500">
+                        {order.total.toLocaleString()} ₽
+                    </span>
+                </p>
             </div>
 
-            <h2>Товары в заказе</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+                Товары в заказе
+            </h2>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                <tr style={{ borderBottom: '2px solid #ddd' }}>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>Товар</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Цена</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Количество</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Сумма</th>
-                </tr>
-                </thead>
-                <tbody>
-                {items.map(item => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '10px' }}>
-                            <div>
-                                <strong>{item.productName}</strong>
-                                <div style={{ fontSize: '12px', color: '#666' }}>Артикул: {item.productSku}</div>
-                            </div>
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>{item.price} ₽</td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'center', padding: '10px', fontWeight: 'bold' }}>{item.total} ₽</td>
+            <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                    <thead>
+                    <tr className="border-b-2 border-gray-200">
+                        <th className="text-left p-3 text-sm font-semibold text-gray-600">
+                            Товар
+                        </th>
+                        <th className="text-center p-3 text-sm font-semibold text-gray-600">
+                            Цена
+                        </th>
+                        <th className="text-center p-3 text-sm font-semibold text-gray-600">
+                            Количество
+                        </th>
+                        <th className="text-center p-3 text-sm font-semibold text-gray-600">
+                            Сумма
+                        </th>
                     </tr>
-                ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    {items.map(item => (
+                        <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
+                            <td className="p-3">
+                                <div>
+                                    <strong className="text-gray-800">{item.productName}</strong>
+                                    <div className="text-xs text-gray-400 mt-0.5">
+                                        Артикул: {item.productSku}
+                                    </div>
+                                </div>
+                            </td>
+                            <td className="text-center p-3 text-gray-700">
+                                {item.price.toLocaleString()} ₽
+                            </td>
+                            <td className="text-center p-3 text-gray-700">
+                                {item.quantity}
+                            </td>
+                            <td className="text-center p-3 font-bold text-gray-800">
+                                {item.total.toLocaleString()} ₽
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
