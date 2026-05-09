@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/api';
+import { Package, MessageSquare, Truck, Bell, CheckCircle } from 'lucide-react';
 
 function NotificationBell() {
     const [notifications, setNotifications] = useState([]);
@@ -12,7 +13,6 @@ function NotificationBell() {
         loadNotifications();
         loadUnreadCount();
 
-        // Обновляем уведомления каждые 30 секунд
         const interval = setInterval(() => {
             loadUnreadCount();
         }, 30000);
@@ -80,97 +80,49 @@ function NotificationBell() {
 
     const getNotificationIcon = (type) => {
         switch(type) {
-            case 'VIN_REQUEST': return '📦';
-            case 'VIN_RESPONSE': return '💬';
-            case 'ORDER_STATUS': return '🚚';
-            default: return '🔔';
+            case 'VIN_REQUEST': return <Package size={16} className="text-blue-500" />;
+            case 'VIN_RESPONSE': return <MessageSquare size={16} className="text-green-500" />;
+            case 'ORDER_STATUS': return <Truck size={16} className="text-purple-500" />;
+            default: return <Bell size={16} className="text-gray-500" />;
         }
     };
 
     return (
-        <div ref={dropdownRef} style={{ position: 'relative' }}>
+        <div ref={dropdownRef} className="relative">
             <button
                 onClick={() => {
                     setShowDropdown(!showDropdown);
                     if (!showDropdown) loadNotifications();
                 }}
-                style={{
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    fontSize: '20px',
-                    padding: '5px',
-                    color: 'white'
-                }}
+                className="relative text-white text-2xl p-1 cursor-pointer bg-transparent border-none flex items-center"
             >
-                🔔
+                <Bell size={20} />
                 {unreadCount > 0 && (
-                    <span style={{
-                        position: 'absolute',
-                        top: '-5px',
-                        right: '-5px',
-                        backgroundColor: '#f44336',
-                        color: 'white',
-                        borderRadius: '50%',
-                        width: '18px',
-                        height: '18px',
-                        fontSize: '11px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 'bold'
-                    }}>
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[11px] w-[18px] h-[18px] flex items-center justify-center font-bold">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
             </button>
 
             {showDropdown && (
-                <div style={{
-                    position: 'absolute',
-                    top: '35px',
-                    right: '0',
-                    width: '320px',
-                    maxHeight: '400px',
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                    zIndex: 200,
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column'
-                }}>
-                    <div style={{
-                        padding: '12px 16px',
-                        borderBottom: '1px solid #eee',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        backgroundColor: '#f9f9f9'
-                    }}>
-                        <strong style={{ fontSize: '14px' }}>Уведомления</strong>
+                <div className="absolute top-9 right-0 w-80 max-h-[400px] bg-white rounded-lg shadow-lg z-[200] flex flex-col overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                        <strong className="text-sm">Уведомления</strong>
                         {notifications.length > 0 && (
                             <button
                                 onClick={markAllAsRead}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontSize: '12px',
-                                    color: '#e67e22'
-                                }}
+                                className="bg-none border-none cursor-pointer text-xs text-orange-500 hover:text-orange-600"
                             >
                                 Прочитать все
                             </button>
                         )}
                     </div>
 
-                    <div style={{ overflowY: 'auto', maxHeight: '350px' }}>
+                    <div className="overflow-y-auto max-h-[350px]">
                         {loading ? (
-                            <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>Загрузка...</div>
+                            <div className="p-5 text-center text-gray-400">Загрузка...</div>
                         ) : notifications.length === 0 ? (
-                            <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                            <div className="p-5 text-center text-gray-400">
                                 Нет уведомлений
                             </div>
                         ) : (
@@ -183,26 +135,22 @@ function NotificationBell() {
                                             window.location.href = notif.link;
                                         }
                                     }}
-                                    style={{
-                                        padding: '12px 16px',
-                                        borderBottom: '1px solid #eee',
-                                        cursor: 'pointer',
-                                        backgroundColor: notif.read ? 'white' : '#f0f7ff',
-                                        transition: '0.2s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = notif.read ? 'white' : '#f0f7ff'}
+                                    className={`p-3 border-b border-gray-200 cursor-pointer transition-colors ${
+                                        notif.read ? 'bg-white' : 'bg-blue-50'
+                                    } hover:bg-gray-100`}
                                 >
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <span style={{ fontSize: '18px' }}>{getNotificationIcon(notif.type)}</span>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: 'bold', fontSize: '13px', marginBottom: '4px' }}>
+                                    <div className="flex gap-3">
+                                        <span className="flex-shrink-0 mt-0.5">
+                                            {getNotificationIcon(notif.type)}
+                                        </span>
+                                        <div className="flex-1">
+                                            <div className="font-bold text-sm mb-1">
                                                 {notif.title}
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                                            <div className="text-xs text-gray-500 mb-1">
                                                 {notif.message}
                                             </div>
-                                            <div style={{ fontSize: '10px', color: '#999' }}>
+                                            <div className="text-[10px] text-gray-400">
                                                 {new Date(notif.createdAt).toLocaleString()}
                                             </div>
                                         </div>

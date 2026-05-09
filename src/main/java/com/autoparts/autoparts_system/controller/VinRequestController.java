@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/vin-requests")
@@ -42,6 +43,16 @@ public class VinRequestController {
     @Autowired
     private UserRepository userRepository;
 
+    // Регулярное выражение для валидации VIN
+    // 17 символов, только латиница и цифры, без букв I, O, Q
+    private static final Pattern VIN_PATTERN = Pattern.compile("^[A-HJ-NPR-Z0-9]{17}$");
+
+    private boolean isValidVin(String vin) {
+        if (vin == null) return false;
+        vin = vin.toUpperCase().trim();
+        return VIN_PATTERN.matcher(vin).matches();
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse> createVinRequest(
             @RequestBody Map<String, String> request,
@@ -53,8 +64,17 @@ public class VinRequestController {
             String vin = request.get("vin");
             String description = request.get("description");
 
+            // Проверка VIN
             if (vin == null || vin.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("VIN номер обязателен"));
+            }
+            if (!isValidVin(vin)) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("VIN номер должен содержать 17 символов (латиница и цифры, без букв I, O, Q)"));
+            }
+
+            // Проверка описания
+            if (description == null || description.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Опишите, какие запчасти нужны"));
             }
 
             VinRequest vinRequest = new VinRequest();
