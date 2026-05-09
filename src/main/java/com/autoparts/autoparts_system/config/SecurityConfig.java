@@ -47,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/external-requests/**").authenticated()
                         .requestMatchers("/api/orders/**").authenticated()
                         .requestMatchers("/api/returns/**").authenticated()
+                        .requestMatchers("/api/users/me").authenticated()
                         // Менеджер-панель (доступ для MANAGER и ADMIN)
                         .requestMatchers("/api/manager/**").hasAnyAuthority("MANAGER", "ADMIN")
                         // Админ-панель (только для ADMIN)

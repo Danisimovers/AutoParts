@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.autoparts.autoparts_system.security.JwtService;
+import com.autoparts.autoparts_system.repository.EmailVerificationRepository;
+import com.autoparts.autoparts_system.repository.UserRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,6 +23,15 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
+    private EmailVerificationRepository emailVerificationRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse> getAllUsers() {
@@ -65,6 +77,21 @@ public class UserController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse> deleteMyAccount(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.substring(7);
+            Long userId = jwtService.extractUserId(token);
+
+            emailVerificationRepository.deleteByUserId(userId);
+            userRepository.deleteById(userId);
+
+            return ResponseEntity.ok(ApiResponse.success("Аккаунт успешно удален", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка при удалении: " + e.getMessage()));
         }
     }
 

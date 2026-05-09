@@ -88,20 +88,20 @@ function Profile() {
             if (!loginResponse.data.success) {
                 setDeleteError('Неверный пароль');
                 setDeleting(false);
-                return;
+                return;  // <-- НЕ ЗАКРЫВАЕМ ОКНО, просто показываем ошибку
             }
 
             // Удаляем аккаунт
-            await api.delete(`/users/${user.id}`);
+            await api.delete('/users/me');
             alert('Аккаунт успешно удален');
+            setShowDeleteModal(false);  // <-- ЗАКРЫВАЕМ ТОЛЬКО ПРИ УСПЕХЕ
+            setDeletePassword('');
             logout();
             navigate('/');
         } catch (error) {
             setDeleteError(error.response?.data?.message || 'Ошибка при удалении аккаунта');
-        } finally {
             setDeleting(false);
-            setShowDeleteModal(false);
-            setDeletePassword('');
+            // Окно не закрываем
         }
     };
 
