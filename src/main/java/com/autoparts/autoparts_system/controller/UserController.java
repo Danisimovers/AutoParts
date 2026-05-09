@@ -8,6 +8,7 @@ import com.autoparts.autoparts_system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import com.autoparts.autoparts_system.security.JwtService;
 import com.autoparts.autoparts_system.repository.EmailVerificationRepository;
@@ -32,6 +33,9 @@ public class UserController {
 
     @Autowired
     private EmailVerificationRepository emailVerificationRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @GetMapping
     public ResponseEntity<ApiResponse> getAllUsers() {
@@ -86,11 +90,25 @@ public class UserController {
             String token = authHeader.substring(7);
             Long userId = jwtService.extractUserId(token);
 
-            emailVerificationRepository.deleteByUserId(userId);
+            jdbcTemplate.update("DELETE FROM notifications WHERE user_id = ?", userId);
+
+            jdbcTemplate.update("DELETE FROM vin_messages WHERE sender_id = ?", userId);
+
+            jdbcTemplate.update("DELETE FROM vin_requests WHERE user_id = ?", userId);
+
+            jdbcTemplate.update("DELETE FROM external_requests WHERE user_id = ?", userId);
+
+            jdbcTemplate.update("DELETE FROM returns WHERE user_id = ?", userId);
+
+            jdbcTemplate.update("DELETE FROM sales_orders WHERE user_id = ?", userId);
+
+            jdbcTemplate.update("DELETE FROM email_verification WHERE user_id = ?", userId);
+
             userRepository.deleteById(userId);
 
             return ResponseEntity.ok(ApiResponse.success("Аккаунт успешно удален", null));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка при удалении: " + e.getMessage()));
         }
     }
