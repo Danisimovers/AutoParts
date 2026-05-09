@@ -20,7 +20,6 @@ import Footer from './components/Footer';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 
-
 // ADMIN
 import AdminLayout from './pages/Admin/AdminLayout';
 import AdminProducts from './pages/Admin/AdminProducts';
@@ -55,158 +54,82 @@ function NavBar({ showVinForm, setShowVinForm }) {
     }, [showDropdown]);
 
     return (
-        <nav style={{
-            backgroundColor: '#333',
-            padding: '15px 20px',
-            display: 'flex',
-            gap: '20px',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-        }}>
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>Каталог</Link>
-                <Link to="/cart" style={{ color: 'white', textDecoration: 'none' }}>Корзина</Link>
-                {isAuthenticated && (
-                    <Link to="/my-orders" style={{ color: 'white', textDecoration: 'none' }}>Мои заказы</Link>
-                )}
-                {isAuthenticated && (
-                    <button
-                        onClick={() => setShowVinForm(true)}
-                        style={{
-                            color: 'white',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '16px'
-                        }}
-                    >
-                        Запрос по VIN
-                    </button>
-                )}
-            </div>
-
-            <div className="dropdown-container" style={{ display: 'flex', alignItems: 'center', gap: '15px', position: 'relative' }}>
-                {isAuthenticated ? (
-                    <>
-                        <NotificationBell />
-                        <span style={{ color: 'white' }}>Здравствуйте, {user?.login}</span>
+        <nav className="bg-gray-800 shadow-lg sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+                <div className="flex items-center gap-6">
+                    <Link to="/" className="text-white font-medium hover:text-gray-300 transition">Каталог</Link>
+                    <Link to="/cart" className="text-white font-medium hover:text-gray-300 transition">Корзина</Link>
+                    {isAuthenticated && (
+                        <Link to="/my-orders" className="text-white font-medium hover:text-gray-300 transition">Мои заказы</Link>
+                    )}
+                    {isAuthenticated && (
                         <button
-                            onClick={() => setShowDropdown(!showDropdown)}
-                            style={{
-                                backgroundColor: '#e67e22',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '50%',
-                                width: '36px',
-                                height: '36px',
-                                fontSize: '16px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}
+                            onClick={() => setShowVinForm(true)}
+                            className="text-white font-medium hover:text-gray-300 transition"
                         >
-                            {user?.login?.charAt(0).toUpperCase()}
+                            Запрос по VIN
                         </button>
+                    )}
+                </div>
 
-                        {showDropdown && (
-                            <div style={{
-                                position: 'absolute',
-                                top: '45px',
-                                right: '0',
-                                backgroundColor: 'white',
-                                borderRadius: '8px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                minWidth: '220px',
-                                zIndex: 100,
-                                overflow: 'hidden'
-                            }}>
-                                <Link
-                                    to="/profile"
-                                    onClick={() => setShowDropdown(false)}
-                                    style={{
-                                        display: 'block',
-                                        padding: '12px 20px',
-                                        color: '#333',
-                                        textDecoration: 'none',
-                                        borderBottom: '1px solid #eee',
-                                        fontSize: '14px'
-                                    }}
-                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-                                >
-                                    Личный кабинет
-                                </Link>
+                <div className="dropdown-container flex items-center gap-4 relative">
+                    {isAuthenticated ? (
+                        <>
+                            <NotificationBell />
+                            <span className="text-gray-200">Здравствуйте, {user?.login}</span>
+                            <button
+                                onClick={() => setShowDropdown(!showDropdown)}
+                                className="bg-orange-500 text-white rounded-full w-9 h-9 flex items-center justify-center font-bold hover:bg-orange-600 transition shadow-md"
+                            >
+                                {user?.login?.charAt(0).toUpperCase()}
+                            </button>
 
-                                {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
+                            {showDropdown && (
+                                <div className="absolute top-12 right-0 bg-white rounded-xl shadow-2xl w-48 overflow-hidden z-50 border border-gray-100">
                                     <Link
-                                        to="/manager/vin-requests"
+                                        to="/profile"
                                         onClick={() => setShowDropdown(false)}
-                                        style={{
-                                            display: 'block',
-                                            padding: '12px 20px',
-                                            color: '#333',
-                                            textDecoration: 'none',
-                                            borderBottom: '1px solid #eee',
-                                            fontSize: '14px'
-                                        }}
-                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                                        className="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition"
                                     >
-                                        Менеджер-панель
+                                        Личный кабинет
                                     </Link>
-                                )}
-
-                                {user?.role === 'ADMIN' && (
-                                    <Link
-                                        to="/admin/products"
-                                        onClick={() => setShowDropdown(false)}
-                                        style={{
-                                            display: 'block',
-                                            padding: '12px 20px',
-                                            color: '#333',
-                                            textDecoration: 'none',
-                                            borderBottom: '1px solid #eee',
-                                            fontSize: '14px'
+                                    {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
+                                        <Link
+                                            to="/manager/vin-requests"
+                                            onClick={() => setShowDropdown(false)}
+                                            className="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition border-t border-gray-100"
+                                        >
+                                            Менеджер-панель
+                                        </Link>
+                                    )}
+                                    {user?.role === 'ADMIN' && (
+                                        <Link
+                                            to="/admin/products"
+                                            onClick={() => setShowDropdown(false)}
+                                            className="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition border-t border-gray-100"
+                                        >
+                                            Админ-панель
+                                        </Link>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            setShowDropdown(false);
+                                            logout();
                                         }}
-                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                                        className="block w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 transition border-t border-gray-100"
                                     >
-                                        Админ-панель
-                                    </Link>
-                                )}
-
-                                <button
-                                    onClick={() => {
-                                        setShowDropdown(false);
-                                        logout();
-                                    }}
-                                    style={{
-                                        display: 'block',
-                                        width: '100%',
-                                        textAlign: 'left',
-                                        padding: '12px 20px',
-                                        color: '#f44336',
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        fontSize: '14px'
-                                    }}
-                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-                                >
-                                    Выйти
-                                </button>
-                            </div>
-                        )}
-                    </>
-                ) : (
-                    <div style={{ display: 'flex', gap: '15px' }}>
-                        <Link to="/login" style={{ color: 'white', textDecoration: 'none' }}>Вход</Link>
-                        <Link to="/register" style={{ color: 'white', textDecoration: 'none' }}>Регистрация</Link>
-                    </div>
-                )}
+                                        Выйти
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="flex gap-4">
+                            <Link to="/login" className="text-gray-200 hover:text-white transition">Вход</Link>
+                            <Link to="/register" className="bg-orange-500 text-white px-4 py-1.5 rounded-lg hover:bg-orange-600 transition">Регистрация</Link>
+                        </div>
+                    )}
+                </div>
             </div>
         </nav>
     );
@@ -234,7 +157,6 @@ function AppRoutes() {
             <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
             <Route path="/vin-requests/:id" element={isAuthenticated ? <UserVinRequestChat /> : <Navigate to="/login" />} />
 
-            {/* Админ-панель */}
             <Route path="/admin" element={isAuthenticated && user?.role === 'ADMIN' ? <AdminLayout /> : <Navigate to="/" />}>
                 <Route path="products" element={<AdminProducts />} />
                 <Route path="users" element={<AdminUsers />} />
@@ -246,7 +168,6 @@ function AppRoutes() {
                 <Route path="external-requests" element={<AdminExternalRequests />} />
             </Route>
 
-            {/* Менеджер-панель */}
             <Route path="/manager" element={isAuthenticated && (user?.role === 'MANAGER' || user?.role === 'ADMIN') ? <ManagerLayout /> : <Navigate to="/" />}>
                 <Route path="vin-requests" element={<VinRequests />} />
                 <Route path="vin-requests/:id" element={<VinRequestChat />} />

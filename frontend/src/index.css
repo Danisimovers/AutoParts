@@ -2,17 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Базовые стили для body и root */
+/* Глобальные стили */
 body {
   margin: 0;
   min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* Убираем max-width у #root, чтобы контент был на всю ширину */
 #root {
-  max-width: 1126px;
   width: 100%;
-  margin: 0 auto;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* Контейнер для контента */
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Убираем плавные переходы */
+* {
+  transition: none;
+}
+
+/* Кастомный скролл */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Адаптив */
+@media (max-width: 1400px) {
+  .page-content {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
 }

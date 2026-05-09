@@ -17,19 +17,53 @@ function ProductCard({ product, onAddToCart }) {
                 padding: '16px',
                 margin: '8px',
                 width: '250px',
-                display: 'inline-block',
+                display: 'flex',
+                flexDirection: 'column',
                 verticalAlign: 'top',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                backgroundColor: '#fff',
+                transition: 'box-shadow 0.2s',
+                height: '100%',
+                minHeight: '280px'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
         >
-            <h3 style={{ fontSize: '18px', margin: '0 0 8px 0' }}>{product.name}</h3>
-            <p style={{ color: '#666', fontSize: '14px' }}>Артикул: {product.sku}</p>
-            <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#e67e22' }}>
-                {product.price} ₽
+            <h3 style={{
+                fontSize: '18px',
+                margin: '0 0 8px 0',
+                minHeight: '48px'
+            }}>
+                {product.name}
+            </h3>
+
+            <p style={{
+                color: '#666',
+                fontSize: '14px',
+                margin: '4px 0'
+            }}>
+                Артикул: {product.sku}
             </p>
-            <p style={{ fontSize: '12px', color: product.stock > 0 ? 'green' : 'red' }}>
+
+            <p style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: '#e67e22',
+                margin: '8px 0'
+            }}>
+                {product.price.toLocaleString()} ₽
+            </p>
+
+            <p style={{
+                fontSize: '12px',
+                color: product.stock > 0 ? 'green' : 'red',
+                margin: '4px 0'
+            }}>
                 {product.stock > 0 ? `В наличии: ${product.stock} шт` : 'Нет в наличии'}
             </p>
+
+            <div style={{ flex: 1 }} /> {/* Это растягивает пространство и прижимает кнопку вниз */}
+
             <button
                 onClick={(e) => {
                     e.stopPropagation();
@@ -40,11 +74,25 @@ function ProductCard({ product, onAddToCart }) {
                     backgroundColor: '#e67e22',
                     color: 'white',
                     border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
+                    padding: '10px 16px',
+                    borderRadius: '6px',
                     cursor: product.stock > 0 ? 'pointer' : 'not-allowed',
                     width: '100%',
-                    marginTop: '10px'
+                    marginTop: '12px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'background-color 0.2s',
+                    opacity: product.stock === 0 ? 0.5 : 1
+                }}
+                onMouseEnter={(e) => {
+                    if (product.stock > 0) {
+                        e.currentTarget.style.backgroundColor = '#d35400';
+                    }
+                }}
+                onMouseLeave={(e) => {
+                    if (product.stock > 0) {
+                        e.currentTarget.style.backgroundColor = '#e67e22';
+                    }
                 }}
             >
                 {product.stock > 0 ? 'В корзину' : 'Нет в наличии'}
