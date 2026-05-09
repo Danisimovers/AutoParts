@@ -10,7 +10,11 @@ import com.autoparts.autoparts_system.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import java.util.Map;
+import java.util.stream.Collectors;
+import com.autoparts.autoparts_system.dto.response.ProductDTO;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,35 +42,53 @@ public class SearchController {
     @Autowired
     private ExternalSupplierService externalSupplierService;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ProductService productService;
+
     @GetMapping
     public ResponseEntity<ApiResponse> search(
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) Long vehicleId) {
+            @RequestParam(required = false) Long vehicleId,
+            @RequestParam(required = false, defaultValue = "contains") String searchType) {
 
-        List<Product> products = searchService.search(query, vehicleId);
+        List<Product> products;
 
-        List<ProductDTO> productDTOs = products.stream()
+        if (query != null && !query.isEmpty()) {
+            String searchQuery = query;
+            if ("startsWith".equals(searchType)) {
+                searchQuery = query + "%";
+            } else if ("exact".equals(searchType)) {
+                searchQuery = query;
+            } else {
+                searchQuery = "%" + query + "%";
+            }
+
+            String sql;
+            if ("exact".equals(searchType)) {
+                sql = "SELECT * FROM products WHERE sku = ? OR name = ?";
+                products = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Product.class), searchQuery, searchQuery);
+            } else {
+                sql = "SELECT * FROM products WHERE sku ILIKE ? OR name ILIKE ? OR oem_code ILIKE ?";
+                products = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(Product.class), searchQuery, searchQuery, searchQuery);
+            }
+        } else {
+            products = productService.getAllProducts();
+        }
+
+        // Фильтр по автомобилю
+        if (vehicleId != null && vehicleId > 0) {
+            String vehicleSql = "SELECT p.* FROM products p JOIN product_vehicle_compat pvc ON p.id = pvc.product_id WHERE pvc.vehicle_id = ?";
+            products = jdbcTemplate.query(vehicleSql, new BeanPropertyRowMapper<>(Product.class), vehicleId);
+        }
+
+        List<ProductDTO> dtos = products.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
 
-        SearchResultDTO result = new SearchResultDTO();
-        result.setQuery(query);
-        result.setVehicleId(vehicleId);
-        result.setTotalResults(productDTOs.size());
-        result.setProducts(productDTOs);
-
-        if (vehicleId != null) {
-            try {
-                Vehicle vehicle = vehicleService.getVehicleById(vehicleId);
-                if (vehicle != null) {
-                    result.setVehicleName(vehicle.getMake() + " " + vehicle.getModel());
-                }
-            } catch (Exception e) {
-                result.setVehicleName("Неизвестный автомобиль");
-            }
-        }
-
-        return ResponseEntity.ok(ApiResponse.success("Поиск выполнен", result));
+        return ResponseEntity.ok(ApiResponse.success("Результаты поиска", Map.of("products", dtos, "count", dtos.size())));
     }
 
     @GetMapping("/external")
