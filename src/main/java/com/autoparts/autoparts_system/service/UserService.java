@@ -32,7 +32,7 @@ public class UserService {
     private EmailVerificationRepository emailVerificationRepository;
 
     @Autowired
-    private PasswordResetTokenRepository passwordResetTokenRepository;  // <-- ДОБАВЛЕНО
+    private PasswordResetTokenRepository passwordResetTokenRepository;
 
     // Регулярное выражение для проверки email
     private static final Pattern EMAIL_PATTERN =
@@ -47,7 +47,7 @@ public class UserService {
 
     private boolean isValidPhone(String phone) {
         if (phone == null || phone.trim().isEmpty()) {
-            return true;
+            return false; // Теперь телефон не может быть пустым
         }
         String cleaned = phone.replaceAll("[^\\d+]", "");
         // Форматы: +79161234567, 89161234567, 9161234567
@@ -80,6 +80,9 @@ public class UserService {
         if (password == null || password.trim().isEmpty()) {
             throw new IllegalArgumentException("Пароль обязателен");
         }
+        if (password.length() < 4) {
+            throw new IllegalArgumentException("Пароль должен быть не менее 4 символов");
+        }
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("Email обязателен");
         }
@@ -89,8 +92,13 @@ public class UserService {
             throw new IllegalArgumentException("Введите корректный email (пример: user@mail.ru)");
         }
 
-        // Проверка телефона (если указан)
-        if (phone != null && !phone.trim().isEmpty() && !isValidPhone(phone)) {
+        // ========== ТЕЛЕФОН ТЕПЕРЬ ОБЯЗАТЕЛЬНЫЙ ==========
+        if (phone == null || phone.trim().isEmpty()) {
+            throw new IllegalArgumentException("Телефон обязателен для регистрации");
+        }
+
+        // Проверка корректности телефона
+        if (!isValidPhone(phone)) {
             throw new IllegalArgumentException("Введите корректный номер телефона (например: +79161234567 или 89161234567)");
         }
 
@@ -104,6 +112,12 @@ public class UserService {
         User existingEmail = userRepository.findByEmail(email);
         if (existingEmail != null) {
             throw new IllegalArgumentException("Пользователь с таким email уже существует");
+        }
+
+        // ========== ПРОВЕРКА ТЕЛЕФОНА НА УНИКАЛЬНОСТЬ ==========
+        User existingPhone = userRepository.findByPhone(phone);
+        if (existingPhone != null) {
+            throw new IllegalArgumentException("Пользователь с таким номером телефона уже зарегистрирован");
         }
 
         // Удаляем старую неподтвержденную регистрацию, если есть
@@ -224,7 +238,6 @@ public class UserService {
 
     // ========== МЕТОДЫ ДЛЯ ВОССТАНОВЛЕНИЯ ПАРОЛЯ ==========
 
-    // Отправка письма для сброса пароля
     public void sendPasswordResetLink(String email) {
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("Email обязателен");
@@ -237,20 +250,17 @@ public class UserService {
             return;
         }
 
-        // Удаляем старые неиспользованные токены для этого email
         passwordResetTokenRepository.deleteByEmail(email);
 
-        // Создаем новый токен
         String token = UUID.randomUUID().toString();
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setEmail(email);
         resetToken.setToken(token);
-        resetToken.setExpiresAt(LocalDateTime.now().plusHours(1)); // Ссылка действительна 1 час
+        resetToken.setExpiresAt(LocalDateTime.now().plusHours(1));
         resetToken.setUsed(false);
 
         passwordResetTokenRepository.save(resetToken);
 
-        // Отправляем email
         try {
             emailService.sendPasswordResetEmail(email, token);
             System.out.println("Password reset link sent to: " + email);
@@ -269,7 +279,6 @@ public class UserService {
         userRepository.update(user);
     }
 
-    // Сброс пароля по токену
     @Transactional
     public void resetPassword(String token, String newPassword) {
         if (newPassword == null || newPassword.trim().isEmpty()) {
@@ -293,20 +302,16 @@ public class UserService {
             throw new IllegalArgumentException("Срок действия ссылки истек. Запросите новое письмо");
         }
 
-        // Находим пользователя по email из токена
         User user = userRepository.findByEmail(resetToken.getEmail());
         if (user == null) {
             throw new IllegalArgumentException("Пользователь не найден");
         }
 
-        // Обновляем пароль
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.update(user);
 
-        // Отмечаем токен как использованный
         passwordResetTokenRepository.markAsUsed(resetToken.getId());
 
         System.out.println("Password reset for user: " + user.getLogin());
-
     }
 }

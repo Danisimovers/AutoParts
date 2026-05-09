@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,13 +31,41 @@ public class AuthController {
     private final UserRepository userRepository;
     private final EmailService emailService;
 
+    // Регулярка для проверки телефона (Российские номера)
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^(\\+7|8)?9\\d{9}$");
+
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest request) {
         try {
-            if ((request.getEmail() == null || request.getEmail().isEmpty()) &&
-                    (request.getPhone() == null || request.getPhone().isEmpty())) {
+            // Проверка логина
+            if (request.getLogin() == null || request.getLogin().trim().isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Укажите email или номер телефона"));
+                        .body(ApiResponse.error("Логин обязателен"));
+            }
+
+            // Проверка пароля
+            if (request.getPassword() == null || request.getPassword().length() < 4) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Пароль должен быть не менее 4 символов"));
+            }
+
+            // Проверка email
+            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Email обязателен"));
+            }
+
+            // Проверка телефона - ТЕПЕРЬ ОБЯЗАТЕЛЬНЫЙ!
+            if (request.getPhone() == null || request.getPhone().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Телефон обязателен для регистрации"));
+            }
+
+            // Валидация формата телефона
+            String cleanedPhone = request.getPhone().replaceAll("[^\\d+]", "");
+            if (!PHONE_PATTERN.matcher(cleanedPhone).matches()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Введите корректный номер телефона (например: +79161234567 или 89161234567)"));
             }
 
             // Временная регистрация (пользователь НЕ создается)

@@ -48,6 +48,16 @@ public class UserRepository {
         }
     }
 
+    // ========== ДОБАВЛЕН МЕТОД findByPhone ==========
+    public User findByPhone(String phone) {
+        String sql = "SELECT * FROM users WHERE phone = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(User.class), phone);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public void save(User user) {
         String sql = "INSERT INTO users (login, password, role, email, phone, created_at, enabled) VALUES (?, ?, ?, ?, ?, ?, ?)";
         jdbcTemplate.update(sql,
