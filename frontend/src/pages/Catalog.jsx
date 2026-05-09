@@ -78,9 +78,9 @@ function Catalog() {
             if (searchQuery) {
                 let query = searchQuery;
                 if (searchType === 'startsWith') {
-                    query = `^${searchQuery}`;
+                    query = `${searchQuery}`;
                 } else if (searchType === 'exact') {
-                    query = `=${searchQuery}`;
+                    query = `${searchQuery}`;
                 }
                 params.push(`query=${encodeURIComponent(query)}`);
                 params.push(`searchType=${searchType}`);
@@ -171,12 +171,6 @@ function Catalog() {
             {/* Поисковая строка с типами поиска */}
             <div className="mb-8">
                 <div className="flex flex-wrap gap-2 mb-3">
-                    <button
-                        onClick={() => setSearchType('contains')}
-                        className={`px-4 py-2 rounded-lg transition ${searchType === 'contains' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                    >
-                        Похожие номера
-                    </button>
                     <button
                         onClick={() => setSearchType('startsWith')}
                         className={`px-4 py-2 rounded-lg transition ${searchType === 'startsWith' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
