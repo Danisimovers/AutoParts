@@ -65,158 +65,149 @@ function Profile() {
         navigate('/forgot-password');
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>Загрузка...</div>;
-    if (!userData) return <div style={{ padding: '20px' }}>Пользователь не найден</div>;
+    if (loading) return (
+        <div className="flex justify-center items-center h-64">
+            <div className="text-gray-500">Загрузка...</div>
+        </div>
+    );
+
+    if (!userData) return (
+        <div className="text-center text-red-500 py-10">Пользователь не найден</div>
+    );
 
     return (
-        <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
-            <h1 style={{ marginBottom: '30px' }}>Личный кабинет</h1>
+        <div className="max-w-3xl mx-auto px-4 py-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-8">Личный кабинет</h1>
 
-            <div style={{ backgroundColor: '#f5f5f5', padding: '20px', borderRadius: '8px', marginBottom: '30px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h2 style={{ margin: 0 }}>Информация о пользователе</h2>
-                    {!editMode && (
-                        <button
-                            onClick={() => setEditMode(true)}
-                            style={{
-                                padding: '8px 16px',
-                                cursor: 'pointer',
-                                backgroundColor: '#e67e22',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px'
-                            }}
-                        >
-                            Редактировать
-                        </button>
-                    )}
+            {/* Основная карточка */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                {/* Шапка карточки */}
+                <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center space-x-4">
+                            <div className="bg-white rounded-full w-16 h-16 flex items-center justify-center">
+                                <span className="text-2xl font-bold text-orange-500">
+                                    {user?.login?.charAt(0).toUpperCase()}
+                                </span>
+                            </div>
+                            <div>
+                                <h2 className="text-white text-xl font-semibold">{userData.login}</h2>
+                                <p className="text-orange-100 text-sm">Роль: {userData.role === 'ADMIN' ? 'Администратор' : userData.role === 'MANAGER' ? 'Менеджер' : 'Покупатель'}</p>
+                            </div>
+                        </div>
+                        {!editMode && (
+                            <button
+                                onClick={() => setEditMode(true)}
+                                className="bg-white text-orange-500 px-4 py-2 rounded-lg font-medium hover:bg-orange-50 transition"
+                            >
+                                Редактировать
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                {error && (
-                    <div style={{
-                        backgroundColor: '#ffebee',
-                        color: '#c62828',
-                        padding: '10px',
-                        borderRadius: '4px',
-                        marginBottom: '15px'
-                    }}>
-                        {error}
-                    </div>
-                )}
-                {success && (
-                    <div style={{
-                        backgroundColor: '#e8f5e9',
-                        color: '#2e7d32',
-                        padding: '10px',
-                        borderRadius: '4px',
-                        marginBottom: '15px'
-                    }}>
-                        {success}
-                    </div>
-                )}
+                {/* Тело карточки */}
+                <div className="p-6">
+                    {error && (
+                        <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">
+                            {error}
+                        </div>
+                    )}
+                    {success && (
+                        <div className="bg-green-50 text-green-600 p-3 rounded-lg mb-4">
+                            {success}
+                        </div>
+                    )}
 
-                {editMode ? (
-                    <form onSubmit={handleUpdate}>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px' }}>Логин</label>
-                            <input
-                                type="text"
-                                value={user.login}
-                                disabled
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px',
-                                    backgroundColor: '#eee'
-                                }}
-                            />
+                    {editMode ? (
+                        <form onSubmit={handleUpdate} className="space-y-4">
+                            <div>
+                                <label className="block text-gray-700 font-medium mb-1">Логин</label>
+                                <input
+                                    type="text"
+                                    value={user.login}
+                                    disabled
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 font-medium mb-1">Email</label>
+                                <input
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    placeholder="your@email.com"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 font-medium mb-1">Телефон</label>
+                                <input
+                                    type="tel"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    placeholder="+7 (XXX) XXX-XX-XX"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="submit"
+                                    className="bg-orange-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-orange-600 transition"
+                                >
+                                    Сохранить
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditMode(false);
+                                        setError('');
+                                    }}
+                                    className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-300 transition"
+                                >
+                                    Отмена
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="flex border-b pb-3">
+                                <span className="w-32 text-gray-500 font-medium">Логин:</span>
+                                <span className="text-gray-800">{userData.login}</span>
+                            </div>
+                            <div className="flex border-b pb-3">
+                                <span className="w-32 text-gray-500 font-medium">Email:</span>
+                                <span className="text-gray-800">{userData.email || '—'}</span>
+                            </div>
+                            <div className="flex border-b pb-3">
+                                <span className="w-32 text-gray-500 font-medium">Телефон:</span>
+                                <span className="text-gray-800">{userData.phone || '—'}</span>
+                            </div>
+                            <div className="flex border-b pb-3">
+                                <span className="w-32 text-gray-500 font-medium">Роль:</span>
+                                <span className="text-gray-800">
+                                    {userData.role === 'ADMIN' ? 'Администратор' :
+                                        userData.role === 'MANAGER' ? 'Менеджер' : 'Покупатель'}
+                                </span>
+                            </div>
+                            <div className="flex pb-2">
+                                <span className="w-32 text-gray-500 font-medium">Регистрация:</span>
+                                <span className="text-gray-800">{new Date(userData.createdAt).toLocaleDateString()}</span>
+                            </div>
                         </div>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px' }}>Email</label>
-                            <input
-                                type="email"
-                                value={formData.email}
-                                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px'
-                                }}
-                            />
-                        </div>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px' }}>Телефон</label>
-                            <input
-                                type="tel"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px'
-                                }}
-                            />
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button
-                                type="submit"
-                                style={{
-                                    padding: '10px 20px',
-                                    backgroundColor: '#e67e22',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Сохранить
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setEditMode(false);
-                                    setError('');
-                                }}
-                                style={{
-                                    padding: '10px 20px',
-                                    backgroundColor: '#666',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Отмена
-                            </button>
-                        </div>
-                    </form>
-                ) : (
-                    <div>
-                        <p><strong>Логин:</strong> {userData.login}</p>
-                        <p><strong>Email:</strong> {userData.email || '—'}</p>
-                        <p><strong>Телефон:</strong> {userData.phone || '—'}</p>
-                        <p><strong>Роль:</strong> {userData.role}</p>
-                        <p><strong>Дата регистрации:</strong> {new Date(userData.createdAt).toLocaleDateString()}</p>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
-            <div style={{ backgroundColor: '#f5f5f5', padding: '20px', borderRadius: '8px' }}>
-
-
+            {/* Карточка смены пароля */}
+            <div className="mt-6 bg-white rounded-2xl shadow-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Безопасность</h3>
+                <p className="text-gray-500 text-sm mb-4">
+                    Хотите изменить пароль? Вы можете запросить сброс пароля на вашу электронную почту.
+                </p>
                 <button
                     onClick={handleChangePassword}
-                    style={{
-                        padding: '10px 20px',
-                        backgroundColor: '#e67e22',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                    }}
+                    className="bg-orange-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-orange-600 transition"
                 >
                     Изменить пароль
                 </button>
