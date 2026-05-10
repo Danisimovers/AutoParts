@@ -37,6 +37,12 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest request) {
         try {
+            // ========== ПРОВЕРКА СОГЛАСИЯ НА ОБРАБОТКУ ПЕРСОНАЛЬНЫХ ДАННЫХ ==========
+            if (request.getConsent() == null || !request.getConsent()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Необходимо принять условия Пользовательского соглашения и дать согласие на обработку персональных данных"));
+            }
+
             // Проверка логина
             if (request.getLogin() == null || request.getLogin().trim().isEmpty()) {
                 return ResponseEntity.badRequest()

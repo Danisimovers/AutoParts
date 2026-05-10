@@ -56,12 +56,10 @@ function VinRequestChat() {
         }
     };
 
-    // Проверка, является ли отправитель текущим пользователем (менеджером/админом)
     const isCurrentUser = (msg) => {
         return msg.senderId === user?.id;
     };
 
-    // Получение имени отправителя для отображения
     const getSenderName = (msg) => {
         if (msg.senderRole === 'CUSTOMER') {
             return `Пользователь ${msg.senderLogin || ''}`;
@@ -71,27 +69,28 @@ function VinRequestChat() {
         return msg.senderLogin || 'Неизвестный';
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>Загрузка...</div>;
+    if (loading) return (
+        <div className="p-8 text-center text-gray-400">
+            Загрузка...
+        </div>
+    );
 
     return (
-        <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-            <button onClick={() => navigate('/manager/vin-requests')} style={{ marginBottom: '20px', cursor: 'pointer' }}>
+        <div className="p-6 flex-1 max-w-4xl mx-auto">
+            <button
+                onClick={() => navigate('/manager/vin-requests')}
+                className="mb-5 text-orange-600 hover:text-orange-700 transition"
+            >
                 ← Назад к заявкам
             </button>
 
-            <h1>Переписка по заявке #{id}</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-5">
+                Переписка по заявке #{id}
+            </h1>
 
-            <div style={{
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                height: '400px',
-                overflowY: 'auto',
-                padding: '15px',
-                marginBottom: '20px',
-                backgroundColor: '#f9f9f9'
-            }}>
+            <div className="border border-gray-200 rounded-xl h-[400px] overflow-y-auto p-4 bg-gray-50 mb-4">
                 {messages.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
+                    <div className="text-center text-gray-400 py-10">
                         Нет сообщений. Напишите ответ пользователю.
                     </div>
                 ) : (
@@ -100,51 +99,23 @@ function VinRequestChat() {
                         return (
                             <div
                                 key={msg.id}
-                                style={{
-                                    display: 'flex',
-                                    justifyContent: currentUser ? 'flex-end' : 'flex-start',
-                                    marginBottom: '15px'
-                                }}
+                                className={`flex mb-3 ${currentUser ? 'justify-end' : 'justify-start'}`}
                             >
-                                <div style={{
-                                    maxWidth: '70%',
-                                    backgroundColor: currentUser ? '#e67e22' : '#e0e0e0',
-                                    color: currentUser ? 'white' : '#333',
-                                    padding: '10px 15px',
-                                    borderRadius: '12px',
-                                    borderBottomRightRadius: currentUser ? '4px' : '12px',
-                                    borderBottomLeftRadius: currentUser ? '12px' : '4px'
-                                }}>
+                                <div className={`max-w-[70%] ${currentUser ? 'bg-orange-500 text-white' : 'bg-white border border-gray-200 text-gray-700'} rounded-lg px-3 py-2`}>
                                     {!currentUser && (
-                                        <div style={{
-                                            fontSize: '11px',
-                                            fontWeight: 'bold',
-                                            color: '#666',
-                                            marginBottom: '4px'
-                                        }}>
+                                        <div className="text-xs font-medium text-gray-500 mb-1">
                                             {getSenderName(msg)}
                                         </div>
                                     )}
                                     {currentUser && (
-                                        <div style={{
-                                            fontSize: '11px',
-                                            fontWeight: 'bold',
-                                            color: 'rgba(255,255,255,0.8)',
-                                            marginBottom: '4px',
-                                            textAlign: 'right'
-                                        }}>
+                                        <div className="text-right text-xs font-medium text-orange-100 mb-1">
                                             Я
                                         </div>
                                     )}
-                                    <div style={{ fontSize: '14px', wordBreak: 'break-word' }}>
+                                    <div className="text-sm break-words">
                                         {msg.message}
                                     </div>
-                                    <div style={{
-                                        fontSize: '10px',
-                                        marginTop: '5px',
-                                        opacity: 0.7,
-                                        textAlign: currentUser ? 'right' : 'left'
-                                    }}>
+                                    <div className={`text-xs mt-1 opacity-70 ${currentUser ? 'text-right text-orange-100' : 'text-left text-gray-400'}`}>
                                         {new Date(msg.createdAt).toLocaleString()}
                                     </div>
                                 </div>
@@ -155,33 +126,18 @@ function VinRequestChat() {
                 <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={sendMessage} style={{ display: 'flex', gap: '10px' }}>
+            <form onSubmit={sendMessage} className="flex gap-2">
                 <textarea
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Введите ваш ответ..."
                     rows="3"
-                    style={{
-                        flex: 1,
-                        padding: '10px',
-                        border: '1px solid #ddd',
-                        borderRadius: '8px',
-                        resize: 'vertical',
-                        fontFamily: 'inherit'
-                    }}
+                    className="flex-1 p-2.5 border border-gray-200 rounded-lg resize-y focus:outline-none focus:ring-1 focus:ring-orange-500 font-sans text-sm"
                 />
                 <button
                     type="submit"
                     disabled={sending || !newMessage.trim()}
-                    style={{
-                        padding: '10px 20px',
-                        backgroundColor: '#e67e22',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        height: 'fit-content'
-                    }}
+                    className="px-5 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50 h-fit"
                 >
                     {sending ? 'Отправка...' : 'Отправить'}
                 </button>

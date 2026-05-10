@@ -37,65 +37,77 @@ function AdminUsers() {
 
     const getRoleColor = (role) => {
         switch(role) {
-            case 'ADMIN': return '#e67e22';
-            case 'MANAGER': return '#2196f3';
-            default: return '#666';
+            case 'ADMIN': return 'bg-orange-100 text-orange-700';
+            case 'MANAGER': return 'bg-blue-100 text-blue-700';
+            default: return 'bg-gray-100 text-gray-700';
         }
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>Загрузка...</div>;
+    const getRoleText = (role) => {
+        switch(role) {
+            case 'ADMIN': return 'Админ';
+            case 'MANAGER': return 'Менеджер';
+            default: return 'Покупатель';
+        }
+    };
+
+    if (loading) return (
+        <div className="p-8 text-center text-gray-400">
+            Загрузка...
+        </div>
+    );
 
     return (
-        <div style={{ padding: '20px', flex: 1 }}>
-            <h1 style={{ marginBottom: '20px' }}>Управление пользователями</h1>
+        <div className="p-6 flex-1">
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">Управление пользователями</h1>
+                <p className="text-sm text-gray-500 mt-1">Всего пользователей: {users.length}</p>
+            </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                <tr style={{ borderBottom: '2px solid #ddd' }}>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>ID</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>Логин</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>Email</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>Телефон</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Роль</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Действия</th>
-                </tr>
-                </thead>
-                <tbody>
-                {users.map(user => (
-                    <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '10px' }}>{user.id}</td>
-                        <td style={{ padding: '10px' }}>{user.login}</td>
-                        <td style={{ padding: '10px' }}>{user.email || '-'}</td>
-                        <td style={{ padding: '10px' }}>{user.phone || '-'}</td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>
-                                <span style={{
-                                    backgroundColor: getRoleColor(user.role),
-                                    color: 'white',
-                                    padding: '4px 12px',
-                                    borderRadius: '20px',
-                                    fontSize: '12px'
-                                }}>
-                                    {user.role}
-                                </span>
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>
-                            {user.role !== 'ADMIN' && (
-                                <select
-                                    onChange={(e) => changeRole(user.id, e.target.value)}
-                                    defaultValue={user.role}
-                                    style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                >
-                                    <option value="CUSTOMER">Покупатель</option>
-                                    <option value="MANAGER">Менеджер</option>
-                                    <option value="ADMIN">Админ</option>
-                                </select>
-                            )}
-                            {user.role === 'ADMIN' && <span style={{ color: '#666' }}>Нельзя изменить</span>}
-                        </td>
+            <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
+                <table className="w-full">
+                    <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left p-3 text-sm font-semibold text-gray-600">ID</th>
+                        <th className="text-left p-3 text-sm font-semibold text-gray-600">Логин</th>
+                        <th className="text-left p-3 text-sm font-semibold text-gray-600">Email</th>
+                        <th className="text-left p-3 text-sm font-semibold text-gray-600">Телефон</th>
+                        <th className="text-center p-3 text-sm font-semibold text-gray-600">Роль</th>
+                        <th className="text-center p-3 text-sm font-semibold text-gray-600">Действия</th>
                     </tr>
-                ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    {users.map(user => (
+                        <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
+                            <td className="p-3 text-sm text-gray-500">{user.id}</td>
+                            <td className="p-3 text-sm font-medium text-gray-800">{user.login}</td>
+                            <td className="p-3 text-sm text-gray-600">{user.email || '-'}</td>
+                            <td className="p-3 text-sm text-gray-600">{user.phone || '-'}</td>
+                            <td className="text-center p-3">
+                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                                        {getRoleText(user.role)}
+                                    </span>
+                            </td>
+                            <td className="text-center p-3">
+                                {user.role !== 'ADMIN' ? (
+                                    <select
+                                        onChange={(e) => changeRole(user.id, e.target.value)}
+                                        defaultValue={user.role}
+                                        className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
+                                    >
+                                        <option value="CUSTOMER">Покупатель</option>
+                                        <option value="MANAGER">Менеджер</option>
+                                        <option value="ADMIN">Админ</option>
+                                    </select>
+                                ) : (
+                                    <span className="text-sm text-gray-400">Нельзя изменить</span>
+                                )}
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

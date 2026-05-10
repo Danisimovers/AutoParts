@@ -36,13 +36,13 @@ function VinRequests() {
         }
     };
 
-    const getStatusColor = (status) => {
+    const getStatusClass = (status) => {
         switch(status) {
-            case 'PENDING': return '#ff9800';
-            case 'PROCESSING': return '#2196f3';
-            case 'COMPLETED': return '#4caf50';
-            case 'REJECTED': return '#f44336';
-            default: return '#666';
+            case 'PENDING': return 'bg-yellow-100 text-yellow-800';
+            case 'PROCESSING': return 'bg-blue-100 text-blue-800';
+            case 'COMPLETED': return 'bg-green-100 text-green-800';
+            case 'REJECTED': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -56,69 +56,70 @@ function VinRequests() {
         }
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>Загрузка...</div>;
+    if (loading) return (
+        <div className="p-8 text-center text-gray-400">
+            Загрузка...
+        </div>
+    );
 
     return (
-        <div>
-            <h1>Заявки по VIN</h1>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                <tr style={{ borderBottom: '2px solid #ddd' }}>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>ID</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>ID пользователя</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>VIN</th>
-                    <th style={{ textAlign: 'left', padding: '10px' }}>Описание</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Статус</th>
-                    <th style={{ textAlign: 'center', padding: '10px' }}>Действия</th>
-                </tr>
-                </thead>
-                <tbody>
-                {requests.map(req => (
-                    <tr key={req.id} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '10px' }}>{req.id}</td>
-                        <td style={{ padding: '10px' }}>{req.userId}</td>
-                        <td style={{ padding: '10px' }}><code>{req.vin}</code></td>
-                        <td style={{ padding: '10px' }}>{req.description || '-'}</td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>
-                            <span style={{
-                                backgroundColor: getStatusColor(req.status),
-                                color: 'white',
-                                padding: '4px 12px',
-                                borderRadius: '20px',
-                                fontSize: '12px'
-                            }}>
-                                {getStatusText(req.status)}
-                            </span>
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '10px' }}>
-                            <select
-                                onChange={(e) => updateStatus(req.id, e.target.value)}
-                                defaultValue={req.status}
-                                style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #ddd', marginRight: '10px' }}
-                            >
-                                <option value="PENDING">Ожидает</option>
-                                <option value="PROCESSING">В обработке</option>
-                                <option value="COMPLETED">Выполнена</option>
-                                <option value="REJECTED">Отклонена</option>
-                            </select>
-                            <button
-                                onClick={() => navigate(`/manager/vin-requests/${req.id}`)}
-                                style={{
-                                    padding: '5px 10px',
-                                    backgroundColor: '#e67e22',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Ответить
-                            </button>
-                        </td>
+        <div className="p-6 flex-1">
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">Заявки по VIN</h1>
+                <p className="text-sm text-gray-500 mt-1">Всего заявок: {requests.length}</p>
+            </div>
+
+            <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
+                <table className="w-full">
+                    <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left p-3 text-sm font-semibold text-gray-600">ID</th>
+                        <th className="text-left p-3 text-sm font-semibold text-gray-600">ID пользователя</th>
+                        <th className="text-left p-3 text-sm font-semibold text-gray-600">VIN</th>
+                        <th className="text-left p-3 text-sm font-semibold text-gray-600">Описание</th>
+                        <th className="text-center p-3 text-sm font-semibold text-gray-600">Статус</th>
+                        <th className="text-center p-3 text-sm font-semibold text-gray-600">Действия</th>
                     </tr>
-                ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    {requests.map(req => (
+                        <tr key={req.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
+                            <td className="p-3 text-sm text-gray-500">{req.id}</td>
+                            <td className="p-3 text-sm text-gray-600">{req.userId}</td>
+                            <td className="p-3 text-sm font-mono text-gray-700">{req.vin}</td>
+                            <td className="p-3 text-sm text-gray-600 max-w-xs truncate">
+                                {req.description || '-'}
+                            </td>
+                            <td className="text-center p-3">
+                                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(req.status)}`}>
+                                        {getStatusText(req.status)}
+                                    </span>
+                            </td>
+                            <td className="text-center p-3">
+                                <div className="flex gap-2 justify-center">
+                                    <select
+                                        onChange={(e) => updateStatus(req.id, e.target.value)}
+                                        defaultValue={req.status}
+                                        className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
+                                    >
+                                        <option value="PENDING">Ожидает</option>
+                                        <option value="PROCESSING">В обработке</option>
+                                        <option value="COMPLETED">Выполнена</option>
+                                        <option value="REJECTED">Отклонена</option>
+                                    </select>
+                                    <button
+                                        onClick={() => navigate(`/manager/vin-requests/${req.id}`)}
+                                        className="bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition text-sm"
+                                    >
+                                        Ответить
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

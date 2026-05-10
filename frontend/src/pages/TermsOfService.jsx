@@ -123,7 +123,7 @@ function TermsOfService() {
             </div>
 
             <div className="mt-8 pt-4 border-t text-center text-gray-400 text-sm">
-                <p>© 2025 AutoParts Shop. Все права защищены.</p>
+                <p>© 2026 AutoParts Shop. Все права защищены.</p>
             </div>
         </div>
     );

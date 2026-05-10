@@ -14,6 +14,8 @@ function Register() {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [showTermsError, setShowTermsError] = useState(false);
 
     // Валидация email
     const validateEmail = (email) => {
@@ -52,6 +54,7 @@ function Register() {
         e.preventDefault();
         setError('');
         setSuccess('');
+        setShowTermsError(false);
 
         if (password !== confirmPassword) {
             setError('Пароли не совпадают');
@@ -68,7 +71,6 @@ function Register() {
             return;
         }
 
-        // Телефон стал обязательным!
         if (!phone) {
             setError('Телефон обязателен для регистрации');
             return;
@@ -79,10 +81,23 @@ function Register() {
             return;
         }
 
+        // Проверка согласия
+        if (!agreedToTerms) {
+            setShowTermsError(true);
+            setError('Необходимо принять условия Пользовательского соглашения и Политики конфиденциальности');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const response = await api.post('/auth/register', { login, password, email, phone });
+            const response = await api.post('/auth/register', {
+                login,
+                password,
+                email,
+                phone,
+                consent: agreedToTerms
+            });
             if (response.data.success) {
                 setSuccess(response.data.message);
                 setLogin('');
@@ -90,6 +105,7 @@ function Register() {
                 setConfirmPassword('');
                 setEmail('');
                 setPhone('');
+                setAgreedToTerms(false);
             } else {
                 setError(response.data.message);
             }
@@ -224,6 +240,34 @@ function Register() {
                             <p className="text-xs text-gray-400 mt-1">
                                 Формат: +7XXXXXXXXXX или 8XXXXXXXXXX
                             </p>
+                        </div>
+
+                        {/* ЧЕКБОКС С СОГЛАСИЕМ (простой HTML) */}
+                        <div className="pt-2">
+                            <label className="flex items-start gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={agreedToTerms}
+                                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                                    className="mt-1 w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500"
+                                />
+                                <span className="text-sm text-gray-600 leading-relaxed">
+                                    Я принимаю условия{' '}
+                                    <Link to="/terms" target="_blank" className="text-orange-500 hover:underline">
+                                        Пользовательского соглашения
+                                    </Link>{' '}
+                                    и{' '}
+                                    <Link to="/privacy-policy" target="_blank" className="text-orange-500 hover:underline">
+                                        Политики конфиденциальности
+                                    </Link>
+                                    , даю согласие на обработку персональных данных
+                                </span>
+                            </label>
+                            {showTermsError && !agreedToTerms && (
+                                <p className="text-xs text-red-500 mt-2">
+                                    Необходимо принять условия Пользовательского соглашения и Политики конфиденциальности
+                                </p>
+                            )}
                         </div>
 
                         <button

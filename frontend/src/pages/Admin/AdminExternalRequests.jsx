@@ -56,14 +56,14 @@ function AdminExternalRequests() {
         }
     };
 
-    const getStatusColor = (status) => {
+    const getStatusClass = (status) => {
         switch(status) {
-            case 'PENDING': return 'bg-yellow-500';
-            case 'PROCESSING': return 'bg-blue-500';
-            case 'ORDERED': return 'bg-purple-500';
-            case 'COMPLETED': return 'bg-green-500';
-            case 'REJECTED': return 'bg-red-500';
-            default: return 'bg-gray-500';
+            case 'PENDING': return 'bg-yellow-100 text-yellow-800';
+            case 'PROCESSING': return 'bg-blue-100 text-blue-800';
+            case 'ORDERED': return 'bg-purple-100 text-purple-800';
+            case 'COMPLETED': return 'bg-green-100 text-green-800';
+            case 'REJECTED': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -78,49 +78,58 @@ function AdminExternalRequests() {
         }
     };
 
-    if (loading) return <div className="p-5">Загрузка...</div>;
+    if (loading) return (
+        <div className="p-8 text-center text-gray-400">
+            Загрузка...
+        </div>
+    );
 
     return (
-        <div className="p-5">
-            <h1 className="text-3xl font-bold mb-6">Запросы товаров от поставщиков</h1>
+        <div className="p-6 flex-1">
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">Запросы товаров от поставщиков</h1>
+                <p className="text-sm text-gray-500 mt-1">Всего запросов: {requests.length}</p>
+            </div>
 
             {requests.length === 0 ? (
-                <div className="text-center text-gray-500 py-10">Нет запросов</div>
+                <div className="text-center text-gray-400 py-10 bg-white rounded-xl border border-gray-200">
+                    Нет запросов
+                </div>
             ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                        <thead className="bg-gray-100">
-                        <tr>
-                            <th className="p-2 text-left">ID</th>
-                            <th className="p-2 text-left">Товар</th>
-                            <th className="p-2 text-left">Артикул</th>
-                            <th className="p-2 text-left">Производитель</th>
-                            <th className="p-2 text-left">Поставщик</th>
-                            <th className="p-2 text-center">Цена</th>
-                            <th className="p-2 text-center">Статус</th>
-                            <th className="p-2 text-center">Действия</th>
+                <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
+                    <table className="w-full">
+                        <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="text-left p-3 text-sm font-semibold text-gray-600">ID</th>
+                            <th className="text-left p-3 text-sm font-semibold text-gray-600">Товар</th>
+                            <th className="text-left p-3 text-sm font-semibold text-gray-600">Артикул</th>
+                            <th className="text-left p-3 text-sm font-semibold text-gray-600">Производитель</th>
+                            <th className="text-left p-3 text-sm font-semibold text-gray-600">Поставщик</th>
+                            <th className="text-center p-3 text-sm font-semibold text-gray-600">Цена</th>
+                            <th className="text-center p-3 text-sm font-semibold text-gray-600">Статус</th>
+                            <th className="text-center p-3 text-sm font-semibold text-gray-600">Действия</th>
                         </tr>
                         </thead>
                         <tbody>
                         {requests.map(req => (
-                            <tr key={req.id} className="border-b">
-                                <td className="p-2">{req.id}</td>
-                                <td className="p-2">{req.productName}</td>
-                                <td className="p-2">{req.factoryNumber}</td>
-                                <td className="p-2">{req.producer || '-'}</td>
-                                <td className="p-2">{req.supplierName}</td>
-                                <td className="p-2 text-center">{req.price} ₽</td>
-                                <td className="p-2 text-center">
-                                        <span className={`${getStatusColor(req.status)} text-white px-2 py-1 rounded-full text-xs`}>
+                            <tr key={req.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
+                                <td className="p-3 text-sm text-gray-500">{req.id}</td>
+                                <td className="p-3 text-sm font-medium text-gray-800">{req.productName}</td>
+                                <td className="p-3 text-sm font-mono text-gray-600">{req.factoryNumber}</td>
+                                <td className="p-3 text-sm text-gray-600">{req.producer || '-'}</td>
+                                <td className="p-3 text-sm text-gray-600">{req.supplierName}</td>
+                                <td className="text-center p-3 text-sm font-semibold text-gray-800">{req.price} ₽</td>
+                                <td className="text-center p-3">
+                                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(req.status)}`}>
                                             {getStatusText(req.status)}
                                         </span>
                                 </td>
-                                <td className="p-2 text-center">
-                                    <div className="flex gap-1 justify-center flex-wrap">
+                                <td className="text-center p-3">
+                                    <div className="flex gap-2 justify-center flex-wrap">
                                         <select
                                             onChange={(e) => updateStatus(req.id, e.target.value)}
                                             defaultValue={req.status}
-                                            className="p-1 border rounded text-sm"
+                                            className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
                                         >
                                             <option value="PENDING">Ожидает</option>
                                             <option value="PROCESSING">В обработке</option>
@@ -131,7 +140,7 @@ function AdminExternalRequests() {
                                         {(req.status === 'PENDING' || req.status === 'PROCESSING') && (
                                             <button
                                                 onClick={() => orderFromRequest(req.id)}
-                                                className="bg-purple-500 text-white px-2 py-1 rounded text-sm hover:bg-purple-600"
+                                                className="bg-purple-500 text-white px-3 py-1 rounded-lg hover:bg-purple-600 transition text-sm"
                                             >
                                                 Заказать
                                             </button>
@@ -139,7 +148,7 @@ function AdminExternalRequests() {
                                         {req.status === 'ORDERED' && (
                                             <button
                                                 onClick={() => addToStock(req.id)}
-                                                className="bg-green-500 text-white px-2 py-1 rounded text-sm hover:bg-green-600"
+                                                className="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition text-sm"
                                             >
                                                 Получен
                                             </button>

@@ -125,7 +125,7 @@ function NavBar({ showVinForm, setShowVinForm }) {
                         </>
                     ) : (
                         <div className="flex gap-4">
-                            <Link to="/login" className="text-gray-200 hover:text-white transition">Вход</Link>
+                            <Link to="/login" className="bg-orange-500 text-white px-4 py-1.5 rounded-lg hover:bg-orange-600 transition">Вход</Link>
                             <Link to="/register" className="bg-orange-500 text-white px-4 py-1.5 rounded-lg hover:bg-orange-600 transition">Регистрация</Link>
                         </div>
                     )}

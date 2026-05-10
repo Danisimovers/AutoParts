@@ -57,7 +57,7 @@ function VerifyEmail() {
                 padding: '30px',
                 borderRadius: '8px'
             }}>
-                <h2>{status === 'success' ? '✅ Подтверждено!' : '❌ Ошибка'}</h2>
+                <h2>{status === 'success' ? ' Подтверждено!' : 'Ошибка'}</h2>
                 <p>{message}</p>
                 {status === 'success' && (
                     <Link to="/login" style={{ display: 'inline-block', marginTop: '15px', color: '#e67e22' }}>

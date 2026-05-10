@@ -12,4 +12,5 @@ public class RegisterRequest {
     private String password;
     private String email;
     private String phone;
+    private Boolean consent; // согласие на обработку ПД
 }
