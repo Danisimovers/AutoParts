@@ -41,13 +41,13 @@ public class SecurityConfig {
                                 "/api/manufacturers",
                                 "/api/manufacturers/**",
                                 "/api/search/**",
-                                "/api/cart/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
                         .requestMatchers("/api/external-requests/**").authenticated()
                         .requestMatchers("/api/orders/**").authenticated()
+                        .requestMatchers("/api/cart/**").authenticated()
                         .requestMatchers("/api/returns/**").authenticated()
                         .requestMatchers("/api/users/me").authenticated()
                         // Менеджер-панель (доступ для MANAGER и ADMIN)

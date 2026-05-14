@@ -2,7 +2,9 @@ package com.autoparts.autoparts_system.controller;
 
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.dto.response.ProductDTO;
+import com.autoparts.autoparts_system.model.ExternalProduct;
 import com.autoparts.autoparts_system.model.Product;
+import com.autoparts.autoparts_system.service.ExternalSupplierService;
 import com.autoparts.autoparts_system.service.ProductService;
 import com.autoparts.autoparts_system.service.StockService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,11 +30,37 @@ public class SearchController {
     private ProductService productService;
 
     @Autowired
+    private ExternalSupplierService externalSupplierService;
+
+    @Autowired
     private StockService stockService;
 
     private String removeHyphens(String str) {
         if (str == null) return null;
         return str.replace("-", "");
+    }
+
+    // ========== ПОИСК У ПОСТАВЩИКОВ (С ПОДДЕРЖКОЙ ТИПА ПОИСКА) ==========
+    @GetMapping("/external")
+    public ResponseEntity<ApiResponse> searchExternalProducts(
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "startsWith") String searchType) {
+
+        // Если запрос пустой, возвращаем fallback товары
+        if (query == null || query.trim().isEmpty()) {
+            List<ExternalProduct> fallbackProducts = externalSupplierService.getFallbackProducts();
+            return ResponseEntity.ok(ApiResponse.success("Товары поставщиков загружены", fallbackProducts));
+        }
+
+        List<ExternalProduct> products = externalSupplierService.searchAllSuppliers(query, searchType);
+        return ResponseEntity.ok(ApiResponse.success("Товары поставщиков загружены", products));
+    }
+
+    // ========== FALLBACK ТОВАРЫ ОТ ПОСТАВЩИКОВ (ДЛЯ ГЛАВНОЙ СТРАНИЦЫ) ==========
+    @GetMapping("/external/fallback")
+    public ResponseEntity<ApiResponse> getExternalFallbackProducts() {
+        List<ExternalProduct> products = externalSupplierService.getFallbackProducts();
+        return ResponseEntity.ok(ApiResponse.success("Товары поставщиков загружены", products));
     }
 
     @GetMapping

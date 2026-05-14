@@ -23,13 +23,20 @@ function Catalog() {
     const [totalItems, setTotalItems] = useState(0);
     const pageSize = 12;
 
+    // Загрузка при монтировании и при смене фильтров
     useEffect(() => {
-        loadProducts();
+        // Если есть активный поисковый запрос - не загружаем обычные товары
+        if (!searchQuery) {
+            loadProducts();
+            // Загружаем случайные товары от поставщиков для отображения (первые 3-5)
+            loadExternalFallback();
+        }
         loadVehicles();
         loadCategories();
         loadManufacturers();
-    }, [currentPage, selectedCategory, selectedManufacturer]);
+    }, [currentPage, selectedCategory, selectedManufacturer, selectedVehicle]);
 
+    // Загрузка товаров с бэка
     const loadProducts = async () => {
         setLoading(true);
         try {
@@ -49,6 +56,22 @@ function Catalog() {
             console.error('Ошибка загрузки товаров:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Загрузка случайных товаров от поставщиков для отображения (когда нет поиска)
+    const loadExternalFallback = async () => {
+        setLoadingExternal(true);
+        try {
+            // Загружаем популярные/последние товары от поставщиков
+            const response = await api.get('/search/external/fallback');
+            if (response.data.success) {
+                setExternalProducts(response.data.data);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки товаров поставщиков:', error);
+        } finally {
+            setLoadingExternal(false);
         }
     };
 
@@ -85,6 +108,7 @@ function Catalog() {
         }
     };
 
+    // Поиск у поставщиков (общая функция)
     const searchExternal = async (query) => {
         if (!query || query.trim() === '') {
             setExternalProducts([]);
@@ -92,7 +116,8 @@ function Catalog() {
         }
         setLoadingExternal(true);
         try {
-            const response = await api.get(`/search/external?query=${encodeURIComponent(query)}`);
+            // Передаём тип поиска на бэк
+            const response = await api.get(`/search/external?query=${encodeURIComponent(query)}&searchType=${searchType}`);
             if (response.data.success) {
                 setExternalProducts(response.data.data);
             }
@@ -103,9 +128,11 @@ function Catalog() {
         }
     };
 
+    // Основной поиск (товары + поставщики)
     const handleSearch = async () => {
         setLoading(true);
         try {
+            // 1. Поиск по товарам на складе
             let url = '/search';
             const params = [];
 
@@ -131,7 +158,13 @@ function Catalog() {
             setLoading(false);
         }
 
-        searchExternal(searchQuery);
+        // 2. Поиск у поставщиков (если есть запрос)
+        if (searchQuery && searchQuery.trim() !== '') {
+            await searchExternal(searchQuery);
+        } else {
+            // Если нет запроса, показываем fallback товары
+            loadExternalFallback();
+        }
     };
 
     const addToCart = async (product) => {
@@ -203,22 +236,6 @@ function Catalog() {
         return count;
     };
 
-    const getActiveFilterName = () => {
-        if (selectedCategory) {
-            const cat = categories.find(c => c.id == selectedCategory);
-            if (cat) return `Категория: ${cat.name}`;
-        }
-        if (selectedManufacturer) {
-            const man = manufacturers.find(m => m.id == selectedManufacturer);
-            if (man) return `Производитель: ${man.name}`;
-        }
-        if (selectedVehicle) {
-            const veh = vehicles.find(v => v.id == selectedVehicle);
-            if (veh) return `Автомобиль: ${veh.make} ${veh.model}`;
-        }
-        return null;
-    };
-
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">Каталог автозапчастей</h1>
@@ -226,7 +243,6 @@ function Catalog() {
             <div className="flex flex-col lg:flex-row gap-6">
                 {/* Левая панель */}
                 <div className="w-full lg:w-80 flex-shrink-0">
-                    {/* Кнопка фильтров */}
                     <button
                         onClick={() => setShowFilters(!showFilters)}
                         className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-orange-300 hover:shadow-md transition"
@@ -243,7 +259,6 @@ function Catalog() {
                         {showFilters ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
                     </button>
 
-                    {/* Активные фильтры */}
                     {getFilterCount() > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2">
                             <span className="text-xs text-gray-500">Активные фильтры:</span>
@@ -268,7 +283,6 @@ function Catalog() {
                         </div>
                     )}
 
-                    {/* Панель фильтров */}
                     {showFilters && (
                         <div className="mt-3 bg-white rounded-xl border border-gray-100 shadow-lg p-5">
                             <div className="space-y-5">
@@ -396,12 +410,15 @@ function Catalog() {
                         <div className="flex justify-center items-center h-64">
                             <div className="text-gray-400">Загрузка...</div>
                         </div>
-                    ) : products.length === 0 ? (
+                    ) : products.length === 0 && !searchQuery ? (
+                        <div className="text-center text-gray-400 py-12">
+                            <p className="text-lg mb-2">Нет товаров в этой категории</p>
+                            <p className="text-sm">Попробуйте изменить фильтры</p>
+                        </div>
+                    ) : products.length === 0 && searchQuery ? (
                         <div className="text-center text-gray-400 py-12">
                             <p className="text-lg mb-2">Товары не найдены</p>
-                            {searchQuery && (
-                                <p className="text-sm">Попробуйте изменить поисковый запрос или тип поиска</p>
-                            )}
+                            <p className="text-sm">Попробуйте изменить поисковый запрос или тип поиска</p>
                         </div>
                     ) : (
                         <>
@@ -415,7 +432,7 @@ function Catalog() {
                                 ))}
                             </div>
 
-                            {totalPages > 1 && (
+                            {totalPages > 1 && !searchQuery && (
                                 <div className="flex justify-center gap-3 mt-10">
                                     <button
                                         onClick={() => goToPage(currentPage - 1)}
@@ -442,10 +459,14 @@ function Catalog() {
                     {/* Товары от поставщиков */}
                     {(externalProducts.length > 0 || loadingExternal) && (
                         <div className="mt-12 pt-6 border-t border-gray-100">
-                            <h2 className="text-lg font-semibold text-orange-500 mb-3">Товары от поставщиков</h2>
+                            <h2 className="text-lg font-semibold text-orange-500 mb-3">
+                                {searchQuery ? 'Товары от поставщиков' : 'Рекомендуемые товары от поставщиков'}
+                            </h2>
                             <div className="bg-orange-50/50 rounded-xl p-4 border border-orange-100">
                                 <p className="text-sm text-gray-500 mb-3">
-                                    Эти товары поставляются от наших партнеров. Срок доставки 3-7 дней.
+                                    {searchQuery
+                                        ? 'Эти товары поставляются от наших партнеров. Срок доставки 3-7 дней.'
+                                        : 'Возможно эти товары вам подойдут. Срок доставки 3-7 дней.'}
                                 </p>
                                 {loadingExternal ? (
                                     <div className="text-center py-6 text-gray-400">Загрузка...</div>
@@ -462,7 +483,7 @@ function Catalog() {
                                                         <p className="text-xs text-gray-400">Поставщик: {product.supplierName}</p>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-xl font-bold text-orange-500">{product.price} ₽</p>
+                                                        <p className="text-xl font-bold text-orange-500">{product.price.toLocaleString()} ₽</p>
                                                         <p className="text-xs text-gray-500">{product.delivery}</p>
                                                         <button
                                                             onClick={() => addExternalToCart(product)}
