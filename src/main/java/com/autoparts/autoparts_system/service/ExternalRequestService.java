@@ -17,7 +17,7 @@ import java.util.Map;
 public class ExternalRequestService {
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private JdbcTemplate jdbcTemplate;  // Оставляем для сложных запросов к другим таблицам
 
     @Autowired
     private ExternalRequestRepository externalRequestRepository;
@@ -28,40 +28,20 @@ public class ExternalRequestService {
     @Autowired
     private StockService stockService;
 
+    // Теперь используем репозиторий
     public List<ExternalRequest> getAllExternalRequests() {
-        String sql = "SELECT * FROM external_requests ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> {
-            ExternalRequest req = new ExternalRequest();
-            req.setId(rs.getLong("id"));
-            req.setUserId(rs.getLong("user_id"));
-            req.setOrderId(rs.getLong("order_id"));
-            req.setProductName(rs.getString("product_name"));
-            req.setFactoryNumber(rs.getString("factory_number"));
-            req.setProducer(rs.getString("producer"));
-            req.setSupplierName(rs.getString("supplier_name"));
-            req.setSupplierId(rs.getLong("supplier_id"));
-            req.setPrice(rs.getDouble("price"));
-            req.setStatus(rs.getString("status"));
-            req.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
-            return req;
-        });
+        return externalRequestRepository.findAll();
     }
 
     @Transactional
     public void updateStatus(Long id, String status) {
-        // Получаем order_id перед обновлением статуса
-        String selectOrderSql = "SELECT order_id FROM external_requests WHERE id = ?";
-        Long orderId = null;
-        try {
-            orderId = jdbcTemplate.queryForObject(selectOrderSql, Long.class, id);
-        } catch (Exception e) {
-            // Может не быть order_id у старых записей
-        }
+        // Используем репозиторий для получения order_id
+        Long orderId = externalRequestRepository.findOrderIdById(id);
 
-        String sql = "UPDATE external_requests SET status = ? WHERE id = ?";
-        jdbcTemplate.update(sql, status, id);
+        // Используем репозиторий для обновления статуса
+        externalRequestRepository.updateStatus(id, status);
 
-        // Синхронизируем статус заказа
+        // Синхронизируем статус заказа (это бизнес-логика, остаётся в сервисе)
         if (orderId != null) {
             String orderStatus = null;
             switch (status) {
@@ -81,9 +61,8 @@ public class ExternalRequestService {
             }
         }
 
-        // Уведомление пользователю
-        String selectUserSql = "SELECT user_id FROM external_requests WHERE id = ?";
-        Long userId = jdbcTemplate.queryForObject(selectUserSql, Long.class, id);
+        // Уведомление пользователю (бизнес-логика)
+        Long userId = externalRequestRepository.findUserIdById(id);
 
         Notification notification = new Notification();
         notification.setUserId(userId);
@@ -97,46 +76,40 @@ public class ExternalRequestService {
 
     @Transactional
     public void orderFromRequest(Long id) {
-        String selectSql = "SELECT * FROM external_requests WHERE id = ?";
-        Map<String, Object> request = jdbcTemplate.queryForMap(selectSql, id);
+        ExternalRequest request = externalRequestRepository.findById(id);
+        if (request == null) {
+            throw new IllegalArgumentException("Запрос не найден");
+        }
 
-        String status = (String) request.get("status");
+        String status = request.getStatus();
         if (!"PROCESSING".equals(status) && !"PENDING".equals(status)) {
             throw new IllegalArgumentException("Заказ уже обработан");
         }
 
-        Object supplierIdObj = request.get("supplier_id");
-        Long supplierId;
-        if (supplierIdObj == null) {
-            String supplierName = (String) request.get("supplier_name");
+        Long supplierId = request.getSupplierId();
+        if (supplierId == null) {
             String findSupplierSql = "SELECT id FROM suppliers WHERE name = ?";
-            supplierId = jdbcTemplate.queryForObject(findSupplierSql, Long.class, supplierName);
-        } else {
-            supplierId = ((Number) supplierIdObj).longValue();
+            supplierId = jdbcTemplate.queryForObject(findSupplierSql, Long.class, request.getSupplierName());
         }
 
         String insertOrderSql = "INSERT INTO purchase_orders (supplier_id, date, status, total) VALUES (?, ?, ?, ?)";
-        jdbcTemplate.update(insertOrderSql, supplierId, LocalDate.now(), "ORDERED", request.get("price"));
+        jdbcTemplate.update(insertOrderSql, supplierId, LocalDate.now(), "ORDERED", request.getPrice());
 
-        // Обновляем статус external_request
-        String updateSql = "UPDATE external_requests SET status = 'ORDERED' WHERE id = ?";
-        jdbcTemplate.update(updateSql, id);
+        // Обновляем статус external_request через репозиторий
+        externalRequestRepository.updateStatus(id, "ORDERED");
 
         // Обновляем статус заказа
-        Object orderIdObj = request.get("order_id");
-        if (orderIdObj != null) {
-            Long orderId = ((Number) orderIdObj).longValue();
+        Long orderId = request.getOrderId();
+        if (orderId != null) {
             String updateOrderSql = "UPDATE sales_orders SET status = 'PENDING_SUPPLIER' WHERE id = ?";
             jdbcTemplate.update(updateOrderSql, orderId);
         }
 
-        Long userId = ((Number) request.get("user_id")).longValue();
-
         Notification notification = new Notification();
-        notification.setUserId(userId);
+        notification.setUserId(request.getUserId());
         notification.setType("EXTERNAL_REQUEST_STATUS");
         notification.setTitle("Товар заказан у поставщика");
-        notification.setMessage("Ваш запрос на товар " + request.get("product_name") + " передан в заказ поставщику");
+        notification.setMessage("Ваш запрос на товар " + request.getProductName() + " передан в заказ поставщику");
         notification.setLink("/profile?tab=external-requests");
         notification.setRead(false);
         notificationRepository.save(notification);
@@ -144,16 +117,18 @@ public class ExternalRequestService {
 
     @Transactional
     public Map<String, Object> addToStockFromRequest(Long id) {
-        String selectSql = "SELECT * FROM external_requests WHERE id = ?";
-        Map<String, Object> request = jdbcTemplate.queryForMap(selectSql, id);
+        ExternalRequest request = externalRequestRepository.findById(id);
+        if (request == null) {
+            throw new IllegalArgumentException("Запрос не найден");
+        }
 
-        String status = (String) request.get("status");
+        String status = request.getStatus();
         if (!"ORDERED".equals(status)) {
             throw new IllegalArgumentException("Товар еще не заказан у поставщика");
         }
 
-        String factoryNumber = (String) request.get("factory_number");
-        String producerName = (String) request.get("producer");
+        String factoryNumber = request.getFactoryNumber();
+        String producerName = request.getProducer();
 
         // Получаем или создаём категорию "Без категории"
         Long defaultCategoryId;
@@ -186,8 +161,8 @@ public class ExternalRequestService {
             String insertProductSql = "INSERT INTO products (sku, name, price, category_id, manufacturer_id) VALUES (?, ?, ?, ?, ?)";
             jdbcTemplate.update(insertProductSql,
                     factoryNumber,
-                    request.get("product_name"),
-                    request.get("price"),
+                    request.getProductName(),
+                    request.getPrice(),
                     defaultCategoryId,
                     manufacturerId);
             productId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
@@ -196,25 +171,21 @@ public class ExternalRequestService {
         // Добавляем на склад
         stockService.addStock(productId, 1, "MAIN");
 
-        // Обновляем статус
-        String updateSql = "UPDATE external_requests SET status = 'COMPLETED' WHERE id = ?";
-        jdbcTemplate.update(updateSql, id);
+        // Обновляем статус external_request через репозиторий
+        externalRequestRepository.updateStatus(id, "COMPLETED");
 
         // Обновляем статус заказа на DELIVERED
-        Object orderIdObj = request.get("order_id");
-        if (orderIdObj != null) {
-            Long orderId = ((Number) orderIdObj).longValue();
+        Long orderId = request.getOrderId();
+        if (orderId != null) {
             String updateOrderSql = "UPDATE sales_orders SET status = 'DELIVERED' WHERE id = ?";
             jdbcTemplate.update(updateOrderSql, orderId);
         }
 
-        Long userId = ((Number) request.get("user_id")).longValue();
-
         Notification notification = new Notification();
-        notification.setUserId(userId);
+        notification.setUserId(request.getUserId());
         notification.setType("EXTERNAL_REQUEST_STATUS");
         notification.setTitle("Товар поступил на склад");
-        notification.setMessage("Запрошенный товар " + request.get("product_name") + " теперь доступен для заказа");
+        notification.setMessage("Запрошенный товар " + request.getProductName() + " теперь доступен для заказа");
         notification.setLink("/catalog?search=" + factoryNumber);
         notification.setRead(false);
         notificationRepository.save(notification);

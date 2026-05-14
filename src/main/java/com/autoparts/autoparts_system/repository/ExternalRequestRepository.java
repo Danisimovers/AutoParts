@@ -54,4 +54,19 @@ public class ExternalRequestRepository {
         String sql = "UPDATE external_requests SET status = ? WHERE id = ?";
         jdbcTemplate.update(sql, status, id);
     }
+
+
+    public Long findOrderIdById(Long id) {
+        String sql = "SELECT order_id FROM external_requests WHERE id = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, Long.class, id);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public Long findUserIdById(Long id) {
+        String sql = "SELECT user_id FROM external_requests WHERE id = ?";
+        return jdbcTemplate.queryForObject(sql, Long.class, id);
+    }
 }
