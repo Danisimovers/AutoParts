@@ -9,11 +9,8 @@ import com.autoparts.autoparts_system.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -42,8 +39,9 @@ public class AdminController {
     private SupplierService supplierService;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private ExternalRequestService externalRequestService;  // ← новый сервис
 
+    // ========== Товары ==========
     @GetMapping("/products")
     public ResponseEntity<ApiResponse> getAllProducts() {
         List<Product> products = productService.getAllProducts();
@@ -112,6 +110,7 @@ public class AdminController {
         }
     }
 
+    // ========== Пользователи ==========
     @GetMapping("/users")
     public ResponseEntity<ApiResponse> getAllUsers() {
         List<User> users = userService.getAllUsers();
@@ -128,6 +127,7 @@ public class AdminController {
         }
     }
 
+    // ========== Поставщики ==========
     @GetMapping("/suppliers")
     public ResponseEntity<ApiResponse> getAllSuppliers() {
         List<Supplier> suppliers = supplierService.getAllSuppliers();
@@ -164,6 +164,7 @@ public class AdminController {
         }
     }
 
+    // ========== Категории ==========
     @GetMapping("/categories")
     public ResponseEntity<ApiResponse> getAllCategories() {
         List<Category> categories = categoryService.getAllCategories();
@@ -200,6 +201,7 @@ public class AdminController {
         }
     }
 
+    // ========== Производители ==========
     @GetMapping("/manufacturers")
     public ResponseEntity<ApiResponse> getAllManufacturers() {
         List<Manufacturer> manufacturers = manufacturerService.getAllManufacturers();
@@ -236,60 +238,16 @@ public class AdminController {
         }
     }
 
-    // ========== Запросы поставщикам ==========
-
+    // ========== Запросы поставщикам (теперь через сервис) ==========
     @GetMapping("/external-requests")
     public ResponseEntity<ApiResponse> getAllExternalRequests() {
-        String sql = "SELECT * FROM external_requests ORDER BY created_at DESC";
-        List<ExternalRequest> requests = jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(ExternalRequest.class));
-        return ResponseEntity.ok(ApiResponse.success("Запросы загружены", requests));
+        return ResponseEntity.ok(ApiResponse.success("Запросы загружены", externalRequestService.getAllExternalRequests()));
     }
 
     @PutMapping("/external-requests/{id}/status")
     public ResponseEntity<ApiResponse> updateExternalRequestStatus(@PathVariable Long id, @RequestParam String status) {
         try {
-            // Получаем order_id перед обновлением статуса
-            String selectOrderSql = "SELECT order_id FROM external_requests WHERE id = ?";
-            Long orderId = null;
-            try {
-                orderId = jdbcTemplate.queryForObject(selectOrderSql, Long.class, id);
-            } catch (Exception e) {
-                // Может не быть order_id у старых записей
-            }
-
-            String sql = "UPDATE external_requests SET status = ? WHERE id = ?";
-            jdbcTemplate.update(sql, status, id);
-
-            // Синхронизируем статус заказа
-            if (orderId != null) {
-                String orderStatus = null;
-                switch (status) {
-                    case "ORDERED":
-                        orderStatus = "PENDING_SUPPLIER";
-                        break;
-                    case "COMPLETED":
-                        orderStatus = "DELIVERED";
-                        break;
-                    case "REJECTED":
-                        orderStatus = "CANCELLED";
-                        break;
-                }
-                if (orderStatus != null) {
-                    String updateOrderSql = "UPDATE sales_orders SET status = ? WHERE id = ?";
-                    jdbcTemplate.update(updateOrderSql, orderStatus, orderId);
-                    System.out.println("Order " + orderId + " status updated to: " + orderStatus);
-                }
-            }
-
-            String selectSql = "SELECT user_id FROM external_requests WHERE id = ?";
-            Long userId = jdbcTemplate.queryForObject(selectSql, Long.class, id);
-
-            String insertSql = "INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES (?, ?, ?, ?, ?, ?)";
-            jdbcTemplate.update(insertSql, userId, "EXTERNAL_REQUEST_STATUS",
-                    "Статус вашего запроса изменен",
-                    "Статус запроса на товар изменен на: " + getStatusText(status),
-                    "/profile?tab=external-requests", false);
-
+            externalRequestService.updateStatus(id, status);
             return ResponseEntity.ok(ApiResponse.success("Статус обновлен", null));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
@@ -299,53 +257,7 @@ public class AdminController {
     @PostMapping("/external-requests/{id}/order")
     public ResponseEntity<ApiResponse> orderFromRequest(@PathVariable Long id) {
         try {
-            String selectSql = "SELECT * FROM external_requests WHERE id = ?";
-            Map<String, Object> request = jdbcTemplate.queryForMap(selectSql, id);
-
-            String status = (String) request.get("status");
-            if (!"PROCESSING".equals(status) && !"PENDING".equals(status)) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Заказ уже обработан"));
-            }
-
-            Object supplierIdObj = request.get("supplier_id");
-            Long supplierId;
-            if (supplierIdObj == null) {
-                String supplierName = (String) request.get("supplier_name");
-                String findSupplierSql = "SELECT id FROM suppliers WHERE name = ?";
-                supplierId = jdbcTemplate.queryForObject(findSupplierSql, Long.class, supplierName);
-            } else {
-                supplierId = ((Number) supplierIdObj).longValue();
-            }
-
-            String insertOrderSql = "INSERT INTO purchase_orders (supplier_id, date, status, total) VALUES (?, ?, ?, ?)";
-            jdbcTemplate.update(insertOrderSql,
-                    supplierId,
-                    LocalDate.now(),
-                    "ORDERED",
-                    request.get("price"));
-
-            // Обновляем статус external_request и синхронизируем заказ
-            String updateSql = "UPDATE external_requests SET status = 'ORDERED' WHERE id = ?";
-            jdbcTemplate.update(updateSql, id);
-
-            Object orderIdObj = request.get("order_id");
-            System.out.println("order_id from DB: " + orderIdObj);
-            Long orderId = null;
-            if (orderIdObj != null) {
-                orderId = ((Number) orderIdObj).longValue();
-                String updateOrderSql = "UPDATE sales_orders SET status = 'PENDING_SUPPLIER' WHERE id = ?";
-                jdbcTemplate.update(updateOrderSql, orderId);
-                System.out.println("Order status updated for orderId: " + orderId);
-            }
-
-            Long userId = ((Number) request.get("user_id")).longValue();
-
-            String insertNotifSql = "INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES (?, ?, ?, ?, ?, ?)";
-            jdbcTemplate.update(insertNotifSql, userId, "EXTERNAL_REQUEST_STATUS",
-                    "Товар заказан у поставщика",
-                    "Ваш запрос на товар " + request.get("product_name") + " передан в заказ поставщику",
-                    "/profile?tab=external-requests", false);
-
+            externalRequestService.orderFromRequest(id);
             return ResponseEntity.ok(ApiResponse.success("Заказ поставщику создан", null));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
@@ -355,123 +267,10 @@ public class AdminController {
     @PutMapping("/external-requests/{id}/add-to-stock")
     public ResponseEntity<ApiResponse> addToStockFromRequest(@PathVariable Long id) {
         try {
-            System.out.println("=== addToStockFromRequest START ===");
-            System.out.println("Request ID: " + id);
-
-            String selectSql = "SELECT * FROM external_requests WHERE id = ?";
-            Map<String, Object> request = jdbcTemplate.queryForMap(selectSql, id);
-
-            System.out.println("Request data: " + request);
-
-            String status = (String) request.get("status");
-            System.out.println("Status: " + status);
-
-            if (!"ORDERED".equals(status)) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Товар еще не заказан у поставщика"));
-            }
-
-            String factoryNumber = (String) request.get("factory_number");
-            String producerName = (String) request.get("producer");
-            System.out.println("Factory number: " + factoryNumber);
-            System.out.println("Producer: " + producerName);
-
-            Long defaultCategoryId;
-            String checkCategorySql = "SELECT id FROM categories WHERE name = 'Без категории'";
-            try {
-                defaultCategoryId = jdbcTemplate.queryForObject(checkCategorySql, Long.class);
-            } catch (Exception e) {
-                String insertCategorySql = "INSERT INTO categories (name) VALUES ('Без категории')";
-                jdbcTemplate.update(insertCategorySql);
-                defaultCategoryId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
-            }
-
-            Long manufacturerId;
-            String checkManufacturerSql = "SELECT id FROM manufacturers WHERE name = ?";
-            try {
-                manufacturerId = jdbcTemplate.queryForObject(checkManufacturerSql, Long.class, producerName);
-            } catch (Exception e) {
-                String insertManufacturerSql = "INSERT INTO manufacturers (name) VALUES (?)";
-                jdbcTemplate.update(insertManufacturerSql, producerName);
-                manufacturerId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
-                System.out.println("Created new manufacturer: " + producerName + " with ID: " + manufacturerId);
-            }
-
-            String checkProductSql = "SELECT id FROM products WHERE sku = ?";
-            Long productId;
-            try {
-                productId = jdbcTemplate.queryForObject(checkProductSql, Long.class, factoryNumber);
-                System.out.println("Existing product found: " + productId);
-            } catch (Exception e) {
-                System.out.println("Product not found, creating new...");
-                String insertProductSql = "INSERT INTO products (sku, name, price, category_id, manufacturer_id) VALUES (?, ?, ?, ?, ?)";
-                jdbcTemplate.update(insertProductSql,
-                        factoryNumber,
-                        request.get("product_name"),
-                        request.get("price"),
-                        defaultCategoryId,
-                        manufacturerId);
-                productId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
-                System.out.println("New product created with ID: " + productId);
-            }
-
-            String checkInventorySql = "SELECT id FROM inventory WHERE product_id = ?";
-            try {
-                jdbcTemplate.queryForObject(checkInventorySql, Long.class, productId);
-                String updateInventorySql = "UPDATE inventory SET quantity = quantity + 1 WHERE product_id = ?";
-                jdbcTemplate.update(updateInventorySql, productId);
-            } catch (Exception e) {
-                String insertInventorySql = "INSERT INTO inventory (product_id, quantity, warehouse_id) VALUES (?, ?, ?)";
-                jdbcTemplate.update(insertInventorySql, productId, 1, "MAIN");
-            }
-
-            String updateSql = "UPDATE external_requests SET status = 'COMPLETED' WHERE id = ?";
-            jdbcTemplate.update(updateSql, id);
-
-            // Обновляем статус заказа на DELIVERED
-            Object orderIdObj = request.get("order_id");
-            Long orderId = null;
-            if (orderIdObj != null) {
-                orderId = ((Number) orderIdObj).longValue();
-            }
-            if (orderId != null) {
-                String updateOrderSql = "UPDATE sales_orders SET status = 'DELIVERED' WHERE id = ?";
-                jdbcTemplate.update(updateOrderSql, orderId);
-                System.out.println("Order " + orderId + " status updated to DELIVERED");
-            }
-
-            Long userId = ((Number) request.get("user_id")).longValue();
-            System.out.println("User ID: " + userId);
-
-            String insertNotifSql = "INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES (?, ?, ?, ?, ?, ?)";
-            jdbcTemplate.update(insertNotifSql, userId, "EXTERNAL_REQUEST_STATUS",
-                    "Товар поступил на склад",
-                    "Запрошенный товар " + request.get("product_name") + " теперь доступен для заказа",
-                    "/catalog?search=" + factoryNumber, false);
-            System.out.println("Notification sent");
-
-            System.out.println("=== addToStockFromRequest SUCCESS ===");
-            return ResponseEntity.ok(ApiResponse.success("Товар добавлен на склад", Map.of("productId", productId)));
+            Map<String, Object> result = externalRequestService.addToStockFromRequest(id);
+            return ResponseEntity.ok(ApiResponse.success("Товар добавлен на склад", result));
         } catch (Exception e) {
-            System.err.println("=== addToStockFromRequest ERROR ===");
-            e.printStackTrace();
             return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка: " + e.getMessage()));
-        }
-    }
-
-    private String getStatusText(String status) {
-        switch (status) {
-            case "PENDING":
-                return "Ожидает обработки";
-            case "PROCESSING":
-                return "В обработке";
-            case "ORDERED":
-                return "Заказан у поставщика";
-            case "COMPLETED":
-                return "Выполнен";
-            case "REJECTED":
-                return "Отклонен";
-            default:
-                return status;
         }
     }
 
