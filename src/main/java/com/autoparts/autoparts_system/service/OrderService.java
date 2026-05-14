@@ -48,7 +48,7 @@ public class OrderService {
         System.out.println("UserId: " + userId);
 
         // Получаем полную корзину (включая товары поставщиков)
-        Map<String, CartService.CartItem> cart = cartService.getCart(userId);
+        Map<String, CartService.CartItemView> cart = cartService.getCart(userId);
         System.out.println("Cart size: " + cart.size());
 
         if (cart.isEmpty()) {
@@ -57,10 +57,10 @@ public class OrderService {
 
         // Отделяем обычные товары от товаров поставщиков
         Map<Long, Integer> regularItems = new HashMap<>();
-        Map<String, CartService.CartItem> externalItems = new HashMap<>();
+        Map<String, CartService.CartItemView> externalItems = new HashMap<>();
 
-        for (Map.Entry<String, CartService.CartItem> entry : cart.entrySet()) {
-            CartService.CartItem item = entry.getValue();
+        for (Map.Entry<String, CartService.CartItemView> entry : cart.entrySet()) {
+            CartService.CartItemView item = entry.getValue();
             if ("REGULAR".equals(item.getType())) {
                 regularItems.put(item.getProductId(), item.getQuantity());
             } else {
@@ -101,7 +101,7 @@ public class OrderService {
         }
 
         // Товары поставщиков
-        for (CartService.CartItem item : externalItems.values()) {
+        for (CartService.CartItemView item : externalItems.values()) {
             total += item.getPrice().doubleValue() * item.getQuantity();
         }
 
@@ -127,8 +127,8 @@ public class OrderService {
         }
 
         // Сохраняем позиции товаров поставщиков и создаем external_requests с order_id и supplier_id
-        for (Map.Entry<String, CartService.CartItem> entry : externalItems.entrySet()) {
-            CartService.CartItem item = entry.getValue();
+        for (Map.Entry<String, CartService.CartItemView> entry : externalItems.entrySet()) {
+            CartService.CartItemView item = entry.getValue();
 
             OrderItem orderItem = new OrderItem();
             orderItem.setOrderId(order.getId());

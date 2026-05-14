@@ -40,6 +40,7 @@ public class SecurityConfig {
                                 "/api/categories/**",
                                 "/api/manufacturers",
                                 "/api/manufacturers/**",
+                                "/api/cart/**",
                                 "/api/search/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -47,7 +48,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/external-requests/**").authenticated()
                         .requestMatchers("/api/orders/**").authenticated()
-                        .requestMatchers("/api/cart/**").authenticated()
+                        //.requestMatchers("/api/cart/**").authenticated()
                         .requestMatchers("/api/returns/**").authenticated()
                         .requestMatchers("/api/users/me").authenticated()
                         // Менеджер-панель (доступ для MANAGER и ADMIN)

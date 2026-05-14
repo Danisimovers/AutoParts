@@ -1,21 +1,31 @@
 package com.autoparts.autoparts_system.service;
 
+import com.autoparts.autoparts_system.model.Cart;
+import com.autoparts.autoparts_system.model.CartItem;
 import com.autoparts.autoparts_system.model.Product;
+import com.autoparts.autoparts_system.repository.CartItemRepository;
+import com.autoparts.autoparts_system.repository.CartRepository;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class CartService {
 
-    // Хранилище корзин: ключ - userId, значение - Map<cartItemId, CartItem>
-    private final Map<Long, Map<String, CartItem>> userCarts = new ConcurrentHashMap<>();
+    private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
+    private final ProductService productService;
 
-    // Внутренний класс для товаров в корзине (включая товары поставщиков)
-    public static class CartItem {
+    @Data
+    public static class CartItemView {
         private String tempId;
         private Long productId;
         private String productName;
@@ -24,131 +34,143 @@ public class CartService {
         private String supplierName;
         private BigDecimal price;
         private int quantity;
-        private String type; // "REGULAR" или "EXTERNAL"
-
-        public String getTempId() { return tempId; }
-        public void setTempId(String tempId) { this.tempId = tempId; }
-        public Long getProductId() { return productId; }
-        public void setProductId(Long productId) { this.productId = productId; }
-        public String getProductName() { return productName; }
-        public void setProductName(String productName) { this.productName = productName; }
-        public String getFactoryNumber() { return factoryNumber; }
-        public void setFactoryNumber(String factoryNumber) { this.factoryNumber = factoryNumber; }
-        public String getProducer() { return producer; }
-        public void setProducer(String producer) { this.producer = producer; }
-        public String getSupplierName() { return supplierName; }
-        public void setSupplierName(String supplierName) { this.supplierName = supplierName; }
-        public BigDecimal getPrice() { return price; }
-        public void setPrice(BigDecimal price) { this.price = price; }
-        public int getQuantity() { return quantity; }
-        public void setQuantity(int quantity) { this.quantity = quantity; }
-        public String getType() { return type; }
-        public void setType(String type) { this.type = type; }
+        private String type;
     }
 
-    // Добавление обычного товара
+    private Long getOrCreateCartId(Long userId) {
+        Cart cart = cartRepository.findByUserId(userId);
+        if (cart == null) {
+            cartRepository.createCartForUser(userId);
+            cart = cartRepository.findByUserId(userId);
+        }
+        return cart.getId();
+    }
+
+    // НОВЫЙ МЕТОД: обновляем время последнего изменения корзины
+    private void touchCart(Long userId) {
+        Cart cart = cartRepository.findByUserId(userId);
+        if (cart != null) {
+            cartRepository.updateUpdatedAt(cart.getId());
+        }
+    }
+
+    @Transactional
     public void addToCart(Long userId, Long productId, int quantity) {
-        if (quantity <= 0) {
-            throw new IllegalArgumentException("Количество должно быть больше 0");
-        }
-        Map<String, CartItem> cart = userCarts.computeIfAbsent(userId, k -> new HashMap<>());
-        String key = "PROD_" + productId;
-        if (cart.containsKey(key)) {
-            cart.get(key).setQuantity(cart.get(key).getQuantity() + quantity);
+        if (quantity <= 0) throw new IllegalArgumentException("Количество должно быть больше 0");
+
+        Long cartId = getOrCreateCartId(userId);
+        String tempId = "PROD_" + productId;
+
+        CartItem existing = cartItemRepository.findByCartIdAndTempId(cartId, tempId);
+        if (existing != null) {
+            cartItemRepository.updateQuantity(cartId, tempId, existing.getQuantity() + quantity);
         } else {
+            Product product = productService.getProductById(productId);
+            if (product == null) {
+                throw new IllegalArgumentException("Товар не найден");
+            }
+
             CartItem item = new CartItem();
-            item.setTempId(key);
+            item.setCartId(cartId);
+            item.setTempId(tempId);
             item.setProductId(productId);
+            item.setItemType("REGULAR");
+            item.setPrice(product.getPrice());
             item.setQuantity(quantity);
-            item.setType("REGULAR");
-            cart.put(key, item);
+            cartItemRepository.save(item);
         }
+
+        touchCart(userId);  // ← ОБНОВЛЯЕМ ВРЕМЯ
     }
 
-    // Добавление товара поставщика
+    @Transactional
     public void addExternalToCart(Long userId, String productName, String factoryNumber,
                                   String producer, String supplierName, BigDecimal price, int quantity) {
-        if (quantity <= 0) {
-            throw new IllegalArgumentException("Количество должно быть больше 0");
-        }
-        Map<String, CartItem> cart = userCarts.computeIfAbsent(userId, k -> new HashMap<>());
-        String key = "EXT_" + factoryNumber;
-        if (cart.containsKey(key)) {
-            cart.get(key).setQuantity(cart.get(key).getQuantity() + quantity);
+        if (quantity <= 0) throw new IllegalArgumentException("Количество должно быть больше 0");
+
+        Long cartId = getOrCreateCartId(userId);
+        String tempId = "EXT_" + factoryNumber;
+
+        CartItem existing = cartItemRepository.findByCartIdAndTempId(cartId, tempId);
+        if (existing != null) {
+            cartItemRepository.updateQuantity(cartId, tempId, existing.getQuantity() + quantity);
         } else {
             CartItem item = new CartItem();
-            item.setTempId(key);
+            item.setCartId(cartId);
+            item.setTempId(tempId);
+            item.setItemType("EXTERNAL");
             item.setProductName(productName);
             item.setFactoryNumber(factoryNumber);
             item.setProducer(producer);
             item.setSupplierName(supplierName);
             item.setPrice(price);
             item.setQuantity(quantity);
-            item.setType("EXTERNAL");
-            cart.put(key, item);
+            cartItemRepository.save(item);
         }
+
+        touchCart(userId);  // ← ОБНОВЛЯЕМ ВРЕМЯ
     }
 
-    public void updateQuantity(Long userId, String itemId, int quantity) {
-        Map<String, CartItem> cart = userCarts.get(userId);
-        if (cart == null) return;
+    @Transactional
+    public void updateQuantity(Long userId, String tempId, int quantity) {
+        Long cartId = getOrCreateCartId(userId);
         if (quantity <= 0) {
-            cart.remove(itemId);
+            cartItemRepository.deleteByCartIdAndTempId(cartId, tempId);
         } else {
-            CartItem item = cart.get(itemId);
-            if (item != null) {
-                item.setQuantity(quantity);
-            }
+            cartItemRepository.updateQuantity(cartId, tempId, quantity);
         }
-        if (cart.isEmpty()) {
-            userCarts.remove(userId);
-        }
+        touchCart(userId);  // ← ОБНОВЛЯЕМ ВРЕМЯ
     }
 
-    public void removeFromCart(Long userId, String itemId) {
-        Map<String, CartItem> cart = userCarts.get(userId);
-        if (cart != null) {
-            cart.remove(itemId);
-            if (cart.isEmpty()) {
-                userCarts.remove(userId);
-            }
+    @Transactional
+    public void removeFromCart(Long userId, String tempId) {
+        Long cartId = getOrCreateCartId(userId);
+        cartItemRepository.deleteByCartIdAndTempId(cartId, tempId);
+        touchCart(userId);  // ← ОБНОВЛЯЕМ ВРЕМЯ
+    }
+
+    public Map<String, CartItemView> getCart(Long userId) {
+        Cart cart = cartRepository.findByUserId(userId);
+        if (cart == null) return new HashMap<>();
+
+        List<CartItem> items = cartItemRepository.findByCartId(cart.getId());
+        Map<String, CartItemView> result = new HashMap<>();
+
+        for (CartItem item : items) {
+            CartItemView view = new CartItemView();
+            view.setTempId(item.getTempId());
+            view.setProductId(item.getProductId());
+            view.setProductName(item.getProductName());
+            view.setFactoryNumber(item.getFactoryNumber());
+            view.setProducer(item.getProducer());
+            view.setSupplierName(item.getSupplierName());
+            view.setPrice(item.getPrice());
+            view.setQuantity(item.getQuantity());
+            view.setType(item.getItemType());
+            result.put(item.getTempId(), view);
         }
+        return result;
     }
 
-    public Map<String, CartItem> getCart(Long userId) {
-        Map<String, CartItem> cart = userCarts.get(userId);
-        return cart != null ? new HashMap<>(cart) : new HashMap<>();
-    }
-
+    @Transactional
     public void clearCart(Long userId) {
-        userCarts.remove(userId);
+        Cart cart = cartRepository.findByUserId(userId);
+        if (cart != null) {
+            cartItemRepository.deleteAllByCartId(cart.getId());
+            touchCart(userId);  // ← ОБНОВЛЯЕМ ВРЕМЯ (корзина очищена, но не удалена)
+        }
     }
 
-    // Временные методы для совместимости с OrderService
     public Map<Long, Integer> getCartLegacy(Long userId) {
-        Map<Long, Integer> legacyCart = new HashMap<>();
-        Map<String, CartItem> cart = userCarts.get(userId);
-        if (cart != null) {
-            for (CartItem item : cart.values()) {
-                if ("REGULAR".equals(item.getType()) && item.getProductId() != null) {
-                    legacyCart.put(item.getProductId(), item.getQuantity());
-                }
-            }
-        }
-        return legacyCart;
+        Cart cart = cartRepository.findByUserId(userId);
+        if (cart == null) return new HashMap<>();
+
+        return cartItemRepository.findByCartId(cart.getId()).stream()
+                .filter(item -> "REGULAR".equals(item.getItemType()) && item.getProductId() != null)
+                .collect(Collectors.toMap(CartItem::getProductId, CartItem::getQuantity));
     }
 
     public void clearCartLegacy(Long userId) {
-        userCarts.remove(userId);
-    }
-
-    public double getTotalPriceLegacy(Long userId, ProductService productService) {
-        Map<Long, Integer> cart = getCartLegacy(userId);
-        return cart.entrySet().stream()
-                .mapToDouble(entry -> {
-                    Product product = productService.getProductById(entry.getKey());
-                    return product.getPrice().doubleValue() * entry.getValue();
-                })
-                .sum();
+        clearCart(userId);
     }
 }

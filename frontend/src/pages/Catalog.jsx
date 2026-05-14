@@ -168,21 +168,51 @@ function Catalog() {
     };
 
     const addToCart = async (product) => {
+        const token = localStorage.getItem('token');
+        console.log('[Catalog] addToCart called');
+        console.log('[Catalog] Product:', product.id, product.name);
+        console.log('[Catalog] Token from localStorage:', token ? token.substring(0, 50) + '...' : 'null');
+
+        if (!token) {
+            console.log('[Catalog] No token, showing auth alert');
+            alert('Для добавления товаров в корзину необходимо войти в аккаунт');
+            window.location.href = '/login';
+            return;
+        }
+
         try {
+            console.log('[Catalog] Sending POST request to /cart/add');
             const response = await api.post('/cart/add', {
                 productId: product.id,
                 quantity: 1
             });
+            console.log('[Catalog] Response:', response.data);
             if (response.data.success) {
                 alert(`${product.name} добавлен в корзину`);
             }
         } catch (error) {
-            console.error('Ошибка добавления в корзину:', error);
-            alert('Ошибка добавления в корзину');
+            console.error('[Catalog] Error details:', error);
+            console.error('[Catalog] Error response status:', error.response?.status);
+            console.error('[Catalog] Error response data:', error.response?.data);
+
+            if (error.response?.status === 403 || error.response?.status === 401) {
+                alert('Сессия истекла. Пожалуйста, войдите снова.');
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            } else {
+                alert('Ошибка добавления в корзину: ' + (error.response?.data?.message || error.message));
+            }
         }
     };
 
     const addExternalToCart = async (product) => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Для добавления товаров в корзину необходимо войти в аккаунт');
+            window.location.href = '/login';
+            return;
+        }
+
         try {
             const response = await api.post('/cart/add-external', {
                 productName: product.name,
@@ -196,8 +226,14 @@ function Catalog() {
                 alert(`${product.name} добавлен в корзину (товар поставщика)`);
             }
         } catch (error) {
-            console.error('Ошибка добавления в корзину:', error);
-            alert('Ошибка добавления в корзину');
+            if (error.response?.status === 403 || error.response?.status === 401) {
+                alert('Сессия истекла. Пожалуйста, войдите снова.');
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            } else {
+                console.error('Ошибка добавления в корзину:', error);
+                alert('Ошибка добавления в корзину');
+            }
         }
     };
 
