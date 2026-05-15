@@ -48,7 +48,7 @@ public class UserRepository {
         }
     }
 
-    // ========== ДОБАВЛЕН МЕТОД findByPhone ==========
+    // метод findByPhone
     public User findByPhone(String phone) {
         String sql = "SELECT * FROM users WHERE phone = ?";
         try {

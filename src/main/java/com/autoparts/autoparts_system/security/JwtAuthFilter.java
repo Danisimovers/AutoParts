@@ -7,6 +7,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,6 +28,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
+
     private final JwtService jwtService;
     private final UserRepository userRepository;
 
@@ -34,50 +38,46 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        System.out.println("=== JWT FILTER START ===");
-        System.out.println("Request URI: " + request.getRequestURI());
-        System.out.println("Request Method: " + request.getMethod());
+        log.debug("JWT Filter - Request URI: {}", request.getRequestURI());
 
         final String authHeader = request.getHeader("Authorization");
-        System.out.println("Authorization header: " + (authHeader != null ? authHeader.substring(0, Math.min(50, authHeader.length())) + "..." : "null"));
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("No Bearer token found, continuing filter chain");
             filterChain.doFilter(request, response);
             return;
         }
 
         final String jwt = authHeader.substring(7);
-        System.out.println("JWT token extracted (first 50 chars): " + jwt.substring(0, Math.min(50, jwt.length())) + "...");
 
         if (!jwtService.validateToken(jwt)) {
-            System.out.println("JWT validation failed");
+            log.warn("JWT validation failed");
             filterChain.doFilter(request, response);
             return;
         }
-        System.out.println("JWT validation SUCCESS");
 
         Long userId = jwtService.extractUserId(jwt);
         String login = jwtService.extractLogin(jwt);
-        System.out.println("Extracted userId: " + userId);
-        System.out.println("Extracted login: " + login);
 
         if (userId == null || login == null) {
-            System.out.println("userId or login is null");
+            log.warn("userId or login is null from token");
             filterChain.doFilter(request, response);
             return;
         }
 
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
-            System.out.println("User not found: " + login);
+            log.warn("User not found: {}", login);
             filterChain.doFilter(request, response);
             return;
         }
 
-        System.out.println("User found: " + user.getLogin());
-        System.out.println("User role: " + user.getRole().name());
-        System.out.println("User enabled: " + user.isEnabled());
+        if (!user.isEnabled()) {
+            log.warn("User {} is disabled", login);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        log.debug("User authenticated: {} with role: {}", user.getLogin(), user.getRole().name());
 
         List<GrantedAuthority> authorities = Collections.singletonList(
                 new SimpleGrantedAuthority(user.getRole().name())
@@ -98,8 +98,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         authToken.setDetails(details);
 
         SecurityContextHolder.getContext().setAuthentication(authToken);
-        System.out.println("Authentication set for user: " + user.getLogin());
-        System.out.println("=== JWT FILTER END ===");
 
         filterChain.doFilter(request, response);
     }

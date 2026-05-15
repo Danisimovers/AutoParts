@@ -7,6 +7,8 @@ import com.autoparts.autoparts_system.model.SalesOrder;
 import com.autoparts.autoparts_system.repository.ExternalRequestRepository;
 import com.autoparts.autoparts_system.repository.OrderItemRepository;
 import com.autoparts.autoparts_system.repository.SalesOrderRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,8 @@ import java.util.Map;
 
 @Service
 public class OrderService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     @Autowired
     private SalesOrderRepository salesOrderRepository;
@@ -44,18 +48,15 @@ public class OrderService {
 
     @Transactional
     public SalesOrder createOrder(Long userId) {
-        System.out.println("=== CREATE ORDER ===");
-        System.out.println("UserId: " + userId);
+        log.debug("Creating order for userId: {}", userId);
 
-        // Получаем полную корзину (включая товары поставщиков)
         Map<String, CartService.CartItemView> cart = cartService.getCart(userId);
-        System.out.println("Cart size: " + cart.size());
+        log.debug("Cart size: {}", cart.size());
 
         if (cart.isEmpty()) {
             throw new IllegalArgumentException("Корзина пуста");
         }
 
-        // Отделяем обычные товары от товаров поставщиков
         Map<Long, Integer> regularItems = new HashMap<>();
         Map<String, CartService.CartItemView> externalItems = new HashMap<>();
 
@@ -79,11 +80,9 @@ public class OrderService {
             }
         }
 
-        // Создаем заказ
         SalesOrder order = new SalesOrder();
         order.setUserId(userId);
 
-        // Если есть товары поставщиков, ставим статус PENDING_SUPPLIER
         if (!externalItems.isEmpty()) {
             order.setStatus("PENDING_SUPPLIER");
         } else {
@@ -91,23 +90,20 @@ public class OrderService {
         }
         order.setCreatedAt(LocalDateTime.now());
 
-        // Вычисляем общую сумму (обычные товары + товары поставщиков)
         double total = 0;
 
-        // Обычные товары
         for (Map.Entry<Long, Integer> entry : regularItems.entrySet()) {
             Product product = productService.getProductById(entry.getKey());
             total += product.getPrice().doubleValue() * entry.getValue();
         }
 
-        // Товары поставщиков
         for (CartService.CartItemView item : externalItems.values()) {
             total += item.getPrice().doubleValue() * item.getQuantity();
         }
 
         order.setTotal(BigDecimal.valueOf(total));
         salesOrderRepository.save(order);
-        System.out.println("Order created with id: " + order.getId());
+        log.debug("Order created with id: {}", order.getId());
 
         // Сохраняем позиции обычных товаров и списываем их со склада
         for (Map.Entry<Long, Integer> entry : regularItems.entrySet()) {
@@ -122,11 +118,10 @@ public class OrderService {
             orderItem.setPrice(product.getPrice());
             orderItemRepository.save(orderItem);
 
-            // Списываем товар со склада
             stockService.removeStock(productId, quantity);
         }
 
-        // Сохраняем позиции товаров поставщиков и создаем external_requests с order_id и supplier_id
+        // Сохраняем позиции товаров поставщиков
         for (Map.Entry<String, CartService.CartItemView> entry : externalItems.entrySet()) {
             CartService.CartItemView item = entry.getValue();
 
@@ -137,22 +132,20 @@ public class OrderService {
             orderItem.setPrice(item.getPrice());
             orderItemRepository.save(orderItem);
 
-            System.out.println("External OrderItem saved: " + item.getProductName() + ", quantity=" + item.getQuantity());
+            log.debug("External OrderItem saved: {}, quantity={}", item.getProductName(), item.getQuantity());
 
-            // Получаем supplier_id по имени поставщика
             String supplierName = item.getSupplierName();
             String findSupplierSql = "SELECT id FROM suppliers WHERE name = ?";
             Long supplierId = null;
             try {
                 supplierId = jdbcTemplate.queryForObject(findSupplierSql, Long.class, supplierName);
             } catch (Exception e) {
-                System.out.println("Supplier not found, creating new: " + supplierName);
+                log.warn("Supplier not found, creating new: {}", supplierName);
                 String insertSupplierSql = "INSERT INTO suppliers (name) VALUES (?)";
                 jdbcTemplate.update(insertSupplierSql, supplierName);
                 supplierId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
             }
 
-            // Создаем запись в external_requests с привязкой к заказу
             ExternalRequest extRequest = new ExternalRequest();
             extRequest.setUserId(userId);
             extRequest.setOrderId(order.getId());
@@ -164,13 +157,12 @@ public class OrderService {
             extRequest.setPrice(item.getPrice().doubleValue());
             extRequest.setStatus("PENDING");
             externalRequestRepository.save(extRequest);
-            System.out.println("ExternalRequest created for: " + item.getProductName() + " with orderId=" + order.getId() + ", supplierId=" + supplierId);
+            log.debug("ExternalRequest created for: {} with orderId={}, supplierId={}", item.getProductName(), order.getId(), supplierId);
         }
 
-        // Очищаем корзину
         cartService.clearCart(userId);
-        System.out.println("Cart cleared for userId: " + userId);
-        System.out.println("=== ORDER CREATED SUCCESSFULLY ===");
+        log.debug("Cart cleared for userId: {}", userId);
+        log.debug("Order created successfully for userId: {}", userId);
 
         return order;
     }

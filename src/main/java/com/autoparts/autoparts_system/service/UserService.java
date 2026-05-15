@@ -7,6 +7,8 @@ import com.autoparts.autoparts_system.model.Role;
 import com.autoparts.autoparts_system.repository.EmailVerificationRepository;
 import com.autoparts.autoparts_system.repository.PasswordResetTokenRepository;
 import com.autoparts.autoparts_system.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,8 @@ import java.util.regex.Pattern;
 
 @Service
 public class UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -34,7 +38,6 @@ public class UserService {
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
-    // Регулярное выражение для проверки email
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
@@ -47,10 +50,9 @@ public class UserService {
 
     private boolean isValidPhone(String phone) {
         if (phone == null || phone.trim().isEmpty()) {
-            return false; // Теперь телефон не может быть пустым
+            return false;
         }
         String cleaned = phone.replaceAll("[^\\d+]", "");
-        // Форматы: +79161234567, 89161234567, 9161234567
         return cleaned.matches("^(\\+7|8)?9\\d{9}$");
     }
 
@@ -70,9 +72,6 @@ public class UserService {
         return userRepository.findByEmail(email);
     }
 
-    /**
-     * Временная регистрация - сохраняем данные в таблицу verification, пользователь НЕ создается
-     */
     public void registerUserTemp(String login, String password, String email, String phone) {
         if (login == null || login.trim().isEmpty()) {
             throw new IllegalArgumentException("Логин обязателен");
@@ -87,46 +86,38 @@ public class UserService {
             throw new IllegalArgumentException("Email обязателен");
         }
 
-        // Проверка корректности email
         if (!isValidEmail(email)) {
             throw new IllegalArgumentException("Введите корректный email (пример: user@mail.ru)");
         }
 
-        // ========== ТЕЛЕФОН ТЕПЕРЬ ОБЯЗАТЕЛЬНЫЙ ==========
         if (phone == null || phone.trim().isEmpty()) {
             throw new IllegalArgumentException("Телефон обязателен для регистрации");
         }
 
-        // Проверка корректности телефона
         if (!isValidPhone(phone)) {
             throw new IllegalArgumentException("Введите корректный номер телефона (например: +79161234567 или 89161234567)");
         }
 
-        // Проверяем, не занят ли логин
         User existing = userRepository.findByLogin(login);
         if (existing != null) {
             throw new IllegalArgumentException("Пользователь с таким логином уже существует");
         }
 
-        // Проверяем, не занят ли email
         User existingEmail = userRepository.findByEmail(email);
         if (existingEmail != null) {
             throw new IllegalArgumentException("Пользователь с таким email уже существует");
         }
 
-        // ========== ПРОВЕРКА ТЕЛЕФОНА НА УНИКАЛЬНОСТЬ ==========
         User existingPhone = userRepository.findByPhone(phone);
         if (existingPhone != null) {
             throw new IllegalArgumentException("Пользователь с таким номером телефона уже зарегистрирован");
         }
 
-        // Удаляем старую неподтвержденную регистрацию, если есть
         emailVerificationRepository.deleteByEmail(email);
 
-        // Создаем запись верификации (без создания пользователя!)
         String token = UUID.randomUUID().toString();
         EmailVerification verification = new EmailVerification();
-        verification.setUserId(null); // Пользователь еще не создан
+        verification.setUserId(null);
         verification.setToken(token);
         verification.setExpiresAt(LocalDateTime.now().plusHours(24));
         verification.setVerified(false);
@@ -137,19 +128,15 @@ public class UserService {
 
         emailVerificationRepository.save(verification);
 
-        // Отправляем email
         try {
             emailService.sendVerificationEmail(email, token);
-            System.out.println("Verification email sent to: " + email);
+            log.debug("Verification email sent to: {}", email);
         } catch (Exception e) {
-            System.err.println("Ошибка отправки email: " + e.getMessage());
+            log.error("Failed to send verification email to {}: {}", email, e.getMessage());
             throw new RuntimeException("Не удалось отправить письмо подтверждения. Попробуйте позже.");
         }
     }
 
-    /**
-     * Подтверждение email и создание пользователя
-     */
     @Transactional
     public User confirmAndCreateUser(String token) {
         EmailVerification verification = emailVerificationRepository.findByToken(token);
@@ -166,7 +153,6 @@ public class UserService {
             throw new IllegalArgumentException("Срок действия ссылки истек. Запросите новое письмо.");
         }
 
-        // Создаем пользователя
         User user = new User();
         user.setLogin(verification.getLogin());
         user.setPassword(verification.getPasswordHash());
@@ -174,44 +160,41 @@ public class UserService {
         user.setEmail(verification.getEmail());
         user.setPhone(verification.getPhone());
         user.setCreatedAt(LocalDateTime.now());
-        user.setEnabled(true); // Сразу активен после подтверждения
+        user.setEnabled(true);
 
         userRepository.save(user);
 
-        // Обновляем запись верификации
         verification.setVerified(true);
         verification.setUserId(user.getId());
         emailVerificationRepository.update(verification);
 
-        System.out.println("User created and activated: " + user.getLogin());
+        log.debug("User created and activated: {}", user.getLogin());
 
         return user;
     }
 
     public User login(String login, String password) {
-        System.out.println("=== LOGIN ATTEMPT ===");
-        System.out.println("Login: " + login);
+        log.debug("Login attempt for user: {}", login);
 
         User user = userRepository.findByLogin(login);
         if (user == null) {
-            System.out.println("User NOT found");
+            log.warn("User not found: {}", login);
             throw new IllegalArgumentException("Пользователь не найден");
         }
 
-        System.out.println("User found: " + user.getLogin());
-        System.out.println("User enabled: " + user.isEnabled());
+        log.debug("User found: {}, enabled: {}", user.getLogin(), user.isEnabled());
 
         if (!user.isEnabled()) {
-            System.out.println("Account not verified!");
+            log.warn("Account not verified: {}", login);
             throw new IllegalArgumentException("Аккаунт не активирован. Проверьте почту и перейдите по ссылке подтверждения.");
         }
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            System.out.println("Password mismatch!");
+            log.warn("Password mismatch for user: {}", login);
             throw new IllegalArgumentException("Неверный пароль");
         }
 
-        System.out.println("Login successful!");
+        log.debug("Login successful for user: {}", login);
         return user;
     }
 
@@ -236,8 +219,6 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
-    // ========== МЕТОДЫ ДЛЯ ВОССТАНОВЛЕНИЯ ПАРОЛЯ ==========
-
     public void sendPasswordResetLink(String email) {
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("Email обязателен");
@@ -245,8 +226,7 @@ public class UserService {
 
         User user = userRepository.findByEmail(email);
         if (user == null) {
-            // Не раскрываем, существует email или нет (для безопасности)
-            System.out.println("Password reset requested for non-existent email: " + email);
+            log.warn("Password reset requested for non-existent email: {}", email);
             return;
         }
 
@@ -263,9 +243,9 @@ public class UserService {
 
         try {
             emailService.sendPasswordResetEmail(email, token);
-            System.out.println("Password reset link sent to: " + email);
+            log.debug("Password reset link sent to: {}", email);
         } catch (Exception e) {
-            System.err.println("Ошибка отправки email: " + e.getMessage());
+            log.error("Failed to send password reset email to {}: {}", email, e.getMessage());
             throw new RuntimeException("Не удалось отправить письмо для восстановления пароля. Попробуйте позже.");
         }
     }
@@ -312,6 +292,6 @@ public class UserService {
 
         passwordResetTokenRepository.markAsUsed(resetToken.getId());
 
-        System.out.println("Password reset for user: " + user.getLogin());
+        log.debug("Password reset for user: {}", user.getLogin());
     }
 }

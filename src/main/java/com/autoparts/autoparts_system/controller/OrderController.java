@@ -39,7 +39,7 @@ public class OrderController {
     @Autowired
     private JwtService jwtService;  // ← добавляем
 
-    // НОВЫЙ МЕТОД: получаем userId из токена (как в CartController)
+    // получаем userId из токена
     private Long getCurrentUserId(HttpServletRequest request) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
@@ -76,7 +76,7 @@ public class OrderController {
         }
     }
 
-    // Остальные методы без изменений
+
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse> getUserOrders(@PathVariable Long userId) {
         List<SalesOrder> orders = orderService.getUserOrders(userId);

@@ -25,10 +25,8 @@ function Catalog() {
 
     // Загрузка при монтировании и при смене фильтров
     useEffect(() => {
-        // Если есть активный поисковый запрос - не загружаем обычные товары
         if (!searchQuery) {
             loadProducts();
-            // Загружаем случайные товары от поставщиков для отображения (первые 3-5)
             loadExternalFallback();
         }
         loadVehicles();
@@ -53,23 +51,22 @@ function Catalog() {
                 setTotalItems(data.totalItems);
             }
         } catch (error) {
-            console.error('Ошибка загрузки товаров:', error);
+            // Ошибка загрузки товаров
         } finally {
             setLoading(false);
         }
     };
 
-    // Загрузка случайных товаров от поставщиков для отображения (когда нет поиска)
+    // Загрузка случайных товаров от поставщиков
     const loadExternalFallback = async () => {
         setLoadingExternal(true);
         try {
-            // Загружаем популярные/последние товары от поставщиков
             const response = await api.get('/search/external/fallback');
             if (response.data.success) {
                 setExternalProducts(response.data.data);
             }
         } catch (error) {
-            console.error('Ошибка загрузки товаров поставщиков:', error);
+            // Ошибка загрузки товаров поставщиков
         } finally {
             setLoadingExternal(false);
         }
@@ -82,7 +79,7 @@ function Catalog() {
                 setVehicles(response.data.data);
             }
         } catch (error) {
-            console.error('Ошибка загрузки автомобилей:', error);
+            // Ошибка загрузки автомобилей
         }
     };
 
@@ -93,7 +90,7 @@ function Catalog() {
                 setCategories(response.data.data);
             }
         } catch (error) {
-            console.error('Ошибка загрузки категорий:', error);
+            // Ошибка загрузки категорий
         }
     };
 
@@ -104,11 +101,11 @@ function Catalog() {
                 setManufacturers(response.data.data);
             }
         } catch (error) {
-            console.error('Ошибка загрузки производителей:', error);
+            // Ошибка загрузки производителей
         }
     };
 
-    // Поиск у поставщиков (общая функция)
+    // Поиск у поставщиков
     const searchExternal = async (query) => {
         if (!query || query.trim() === '') {
             setExternalProducts([]);
@@ -116,23 +113,21 @@ function Catalog() {
         }
         setLoadingExternal(true);
         try {
-            // Передаём тип поиска на бэк
             const response = await api.get(`/search/external?query=${encodeURIComponent(query)}&searchType=${searchType}`);
             if (response.data.success) {
                 setExternalProducts(response.data.data);
             }
         } catch (error) {
-            console.error('Ошибка поиска у поставщиков:', error);
+            // Ошибка поиска у поставщиков
         } finally {
             setLoadingExternal(false);
         }
     };
 
-    // Основной поиск (товары + поставщики)
+    // Основной поиск
     const handleSearch = async () => {
         setLoading(true);
         try {
-            // 1. Поиск по товарам на складе
             let url = '/search';
             const params = [];
 
@@ -153,54 +148,41 @@ function Catalog() {
                 setTotalPages(1);
             }
         } catch (error) {
-            console.error('Ошибка поиска:', error);
+            // Ошибка поиска
         } finally {
             setLoading(false);
         }
 
-        // 2. Поиск у поставщиков (если есть запрос)
         if (searchQuery && searchQuery.trim() !== '') {
             await searchExternal(searchQuery);
         } else {
-            // Если нет запроса, показываем fallback товары
             loadExternalFallback();
         }
     };
 
     const addToCart = async (product) => {
         const token = localStorage.getItem('token');
-        console.log('[Catalog] addToCart called');
-        console.log('[Catalog] Product:', product.id, product.name);
-        console.log('[Catalog] Token from localStorage:', token ? token.substring(0, 50) + '...' : 'null');
-
         if (!token) {
-            console.log('[Catalog] No token, showing auth alert');
             alert('Для добавления товаров в корзину необходимо войти в аккаунт');
             window.location.href = '/login';
             return;
         }
 
         try {
-            console.log('[Catalog] Sending POST request to /cart/add');
             const response = await api.post('/cart/add', {
                 productId: product.id,
                 quantity: 1
             });
-            console.log('[Catalog] Response:', response.data);
             if (response.data.success) {
                 alert(`${product.name} добавлен в корзину`);
             }
         } catch (error) {
-            console.error('[Catalog] Error details:', error);
-            console.error('[Catalog] Error response status:', error.response?.status);
-            console.error('[Catalog] Error response data:', error.response?.data);
-
             if (error.response?.status === 403 || error.response?.status === 401) {
                 alert('Сессия истекла. Пожалуйста, войдите снова.');
                 localStorage.removeItem('token');
                 window.location.href = '/login';
             } else {
-                alert('Ошибка добавления в корзину: ' + (error.response?.data?.message || error.message));
+                alert('Ошибка добавления в корзину');
             }
         }
     };
@@ -231,7 +213,6 @@ function Catalog() {
                 localStorage.removeItem('token');
                 window.location.href = '/login';
             } else {
-                console.error('Ошибка добавления в корзину:', error);
                 alert('Ошибка добавления в корзину');
             }
         }

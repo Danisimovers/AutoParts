@@ -2,6 +2,7 @@ package com.autoparts.autoparts_system.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
@@ -10,8 +11,11 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    private final String SECRET_KEY = "autopartsSecretKey2024ForJWTTokenGenerationVeryLongKey123456";
-    private final long EXPIRATION_TIME = 86400000; // 24 часа
+    @Value("${jwt.secret}")
+    private String SECRET_KEY;
+
+    @Value("${jwt.expiration}")
+    private long EXPIRATION_TIME;
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());

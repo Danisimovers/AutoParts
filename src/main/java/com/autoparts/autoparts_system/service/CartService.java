@@ -80,7 +80,7 @@ public class CartService {
             cartItemRepository.save(item);
         }
 
-        touchCart(userId);  // ← ОБНОВЛЯЕМ ВРЕМЯ
+        touchCart(userId);
     }
 
     @Transactional
@@ -108,7 +108,7 @@ public class CartService {
             cartItemRepository.save(item);
         }
 
-        touchCart(userId);  // ← ОБНОВЛЯЕМ ВРЕМЯ
+        touchCart(userId);
     }
 
     @Transactional
@@ -119,14 +119,14 @@ public class CartService {
         } else {
             cartItemRepository.updateQuantity(cartId, tempId, quantity);
         }
-        touchCart(userId);  // ← ОБНОВЛЯЕМ ВРЕМЯ
+        touchCart(userId);
     }
 
     @Transactional
     public void removeFromCart(Long userId, String tempId) {
         Long cartId = getOrCreateCartId(userId);
         cartItemRepository.deleteByCartIdAndTempId(cartId, tempId);
-        touchCart(userId);  // ← ОБНОВЛЯЕМ ВРЕМЯ
+        touchCart(userId);
     }
 
     public Map<String, CartItemView> getCart(Long userId) {
@@ -157,7 +157,7 @@ public class CartService {
         Cart cart = cartRepository.findByUserId(userId);
         if (cart != null) {
             cartItemRepository.deleteAllByCartId(cart.getId());
-            touchCart(userId);  // ← ОБНОВЛЯЕМ ВРЕМЯ (корзина очищена, но не удалена)
+            touchCart(userId);
         }
     }
 
