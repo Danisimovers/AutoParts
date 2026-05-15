@@ -1,22 +1,25 @@
 package com.autoparts.autoparts_system.controller;
 
-import com.autoparts.autoparts_system.dto.request.CreateOrderRequest;
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.dto.response.OrderDTO;
 import com.autoparts.autoparts_system.dto.response.OrderItemDTO;
 import com.autoparts.autoparts_system.model.OrderItem;
 import com.autoparts.autoparts_system.model.Product;
 import com.autoparts.autoparts_system.model.SalesOrder;
+import com.autoparts.autoparts_system.security.JwtService;
 import com.autoparts.autoparts_system.service.OrderService;
 import com.autoparts.autoparts_system.service.ProductService;
 import com.autoparts.autoparts_system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -33,10 +36,37 @@ public class OrderController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private JwtService jwtService;  // ← добавляем
+
+    // НОВЫЙ МЕТОД: получаем userId из токена (как в CartController)
+    private Long getCurrentUserId(HttpServletRequest request) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null) {
+            Object details = authentication.getDetails();
+            if (details instanceof Map) {
+                Object userId = ((Map<?, ?>) details).get("userId");
+                if (userId instanceof Long) return (Long) userId;
+                if (userId instanceof Integer) return ((Integer) userId).longValue();
+            }
+        }
+
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            Long userId = jwtService.extractUserId(token);
+            if (userId != null) return userId;
+        }
+
+        throw new RuntimeException("Не удалось определить ID пользователя");
+    }
+
+    // ИСПРАВЛЕННЫЙ метод createOrder
     @PostMapping
-    public ResponseEntity<ApiResponse> createOrder(@RequestBody CreateOrderRequest request) {
+    public ResponseEntity<ApiResponse> createOrder(HttpServletRequest httpRequest) {
         try {
-            SalesOrder order = orderService.createOrder(request.getUserId());
+            Long userId = getCurrentUserId(httpRequest);
+            SalesOrder order = orderService.createOrder(userId);
             OrderDTO dto = convertToDTO(order);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Заказ успешно создан", dto));
@@ -46,6 +76,7 @@ public class OrderController {
         }
     }
 
+    // Остальные методы без изменений
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse> getUserOrders(@PathVariable Long userId) {
         List<SalesOrder> orders = orderService.getUserOrders(userId);

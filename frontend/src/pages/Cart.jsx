@@ -75,7 +75,7 @@ function Cart() {
         setIsProcessing(true);
 
         try {
-            const response = await api.post('/orders', { userId });
+            const response = await api.post('/orders');
             if (response.data.success) {
                 setShowCheckoutModal(false);
                 alert('Заказ успешно оформлен!');
