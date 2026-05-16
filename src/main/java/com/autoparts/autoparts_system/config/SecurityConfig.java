@@ -50,6 +50,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/orders/**").authenticated()
                         //.requestMatchers("/api/cart/**").authenticated()
                         .requestMatchers("/api/returns/**").authenticated()
+                        .requestMatchers("/api/test-supplier/**").permitAll()
                         .requestMatchers("/api/users/me").authenticated()
                         // Менеджер-панель (доступ для MANAGER и ADMIN)
                         .requestMatchers("/api/manager/**").hasAnyAuthority("MANAGER", "ADMIN")

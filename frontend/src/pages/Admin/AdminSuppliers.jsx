@@ -55,7 +55,7 @@ function AdminSuppliers() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Удалить поставщика?')) return;
+        if (!window.confirm('Удалить поставщика? Внимание! Если есть связанные запросы, удаление может быть заблокировано.')) return;
         try {
             await api.delete(`/admin/suppliers/${id}`);
             alert('Поставщик удален');
@@ -65,7 +65,15 @@ function AdminSuppliers() {
                 loadSuppliers();
             }
         } catch (error) {
-            alert('Ошибка удаления');
+            console.error('Ошибка удаления:', error);
+            if (error.response?.status === 401) {
+                alert('Сессия истекла. Пожалуйста, войдите заново.');
+                // Перенаправление на логин произойдет автоматически
+            } else if (error.response?.data?.message) {
+                alert(error.response.data.message);
+            } else {
+                alert('Ошибка удаления. Возможно, у поставщика есть связанные запросы.');
+            }
         }
     };
 

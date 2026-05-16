@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,26 +30,26 @@ public class SearchController {
     @Autowired
     private StockService stockService;
 
-    // ПОИСК У ПОСТАВЩИКОВ
+    // ПОИСК У ПОСТАВЩИКОВ (только при наличии поискового запроса)
     @GetMapping("/external")
     public ResponseEntity<ApiResponse> searchExternalProducts(
             @RequestParam(required = false) String query,
             @RequestParam(defaultValue = "startsWith") String searchType) {
 
+        // Если нет поискового запроса - возвращаем пустой список
         if (query == null || query.trim().isEmpty()) {
-            List<ExternalProduct> fallbackProducts = externalSupplierService.getFallbackProducts();
-            return ResponseEntity.ok(ApiResponse.success("Товары поставщиков загружены", fallbackProducts));
+            return ResponseEntity.ok(ApiResponse.success("Введите поисковый запрос", new ArrayList<>()));
         }
 
         List<ExternalProduct> products = externalSupplierService.searchAllSuppliers(query, searchType);
-        return ResponseEntity.ok(ApiResponse.success("Товары поставщиков загружены", products));
+        return ResponseEntity.ok(ApiResponse.success("Товары поставщиков", products));
     }
 
-    // FALLBACK ТОВАРЫ ОТ ПОСТАВЩИКОВ
+    // FALLBACK ТОВАРЫ (нужен для фронтенда при загрузке страницы)
     @GetMapping("/external/fallback")
     public ResponseEntity<ApiResponse> getExternalFallbackProducts() {
-        List<ExternalProduct> products = externalSupplierService.getFallbackProducts();
-        return ResponseEntity.ok(ApiResponse.success("Товары поставщиков загружены", products));
+        // Возвращаем пустой список, чтобы не показывать товары при загрузке
+        return ResponseEntity.ok(ApiResponse.success("Товары поставщиков", new ArrayList<>()));
     }
 
     // ОСНОВНОЙ ПОИСК
@@ -60,7 +61,6 @@ public class SearchController {
             @RequestParam(required = false) Long manufacturerId,
             @RequestParam(required = false, defaultValue = "contains") String searchType) {
 
-        // Вся логика поиска и фильтрации теперь в сервисе
         List<Product> products = searchService.searchAdvanced(query, searchType, categoryId, manufacturerId, vehicleId);
 
         List<ProductDTO> dtos = products.stream()

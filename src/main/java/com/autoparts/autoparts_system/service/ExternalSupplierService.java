@@ -1,8 +1,10 @@
 package com.autoparts.autoparts_system.service;
 
+import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.model.ExternalProduct;
 import com.autoparts.autoparts_system.model.Supplier;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -18,27 +20,81 @@ public class ExternalSupplierService {
     @Autowired
     private RestTemplate restTemplate;
 
+    // Поиск товаров у всех поставщиков
     public List<ExternalProduct> searchAllSuppliers(String query, String searchType) {
         List<Supplier> suppliers = supplierService.getAllSuppliers();
         List<ExternalProduct> allProducts = new ArrayList<>();
 
         for (Supplier supplier : suppliers) {
+            // Пропускаем поставщиков без API URL
             if (supplier.getApiUrl() == null || supplier.getApiUrl().isEmpty()) {
+                System.out.println("У поставщика " + supplier.getName() + " нет API URL");
                 continue;
             }
+
             try {
+                // РЕАЛЬНЫЙ ЗАПРОС к API поставщика с передачей supplierId
                 List<ExternalProduct> products = searchFromSupplier(query, searchType, supplier);
-                products.forEach(p -> p.setSupplierName(supplier.getName()));
+                products.forEach(p -> {
+                    p.setSupplierName(supplier.getName());
+                    p.setSupplierId(supplier.getId());
+                });
                 allProducts.addAll(products);
+                System.out.println("Найдено " + products.size() + " товаров у " + supplier.getName());
             } catch (Exception e) {
-                System.err.println("Ошибка запроса к поставщику " + supplier.getName() + ": " + e.getMessage());
+                System.err.println("Ошибка запроса к " + supplier.getName() + ": " + e.getMessage());
             }
         }
         return allProducts;
     }
 
-    // Получить fallback-товары для отображения (когда нет поиска)
-    public List<ExternalProduct> getFallbackProducts() {
+    // Реальный HTTP-запрос к API поставщика с передачей supplierId
+    private List<ExternalProduct> searchFromSupplier(String query, String searchType, Supplier supplier) {
+        try {
+            // Формируем URL для запроса с передачей supplierId
+            String url = supplier.getApiUrl() + "/search?query=" + query + "&searchType=" + searchType + "&supplierId=" + supplier.getId();
+            System.out.println("Запрос к API: " + url);
+
+            // Выполняем GET-запрос
+            ResponseEntity<ApiResponse> response = restTemplate.getForEntity(url, ApiResponse.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().isSuccess()) {
+                Object data = response.getBody().getData();
+                if (data instanceof List) {
+                    return convertToProductList((List<?>) data, supplier);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Ошибка при запросе к " + supplier.getName() + ": " + e.getMessage());
+        }
+        return Collections.emptyList();
+    }
+
+    // Конвертация ответа API в список ExternalProduct
+    @SuppressWarnings("unchecked")
+    private List<ExternalProduct> convertToProductList(List<?> data, Supplier supplier) {
+        List<ExternalProduct> products = new ArrayList<>();
+        for (Object item : data) {
+            if (item instanceof Map) {
+                Map<String, Object> map = (Map<String, Object>) item;
+                ExternalProduct product = new ExternalProduct();
+                product.setId(((Number) map.get("id")).longValue());
+                product.setFactoryNumber((String) map.get("factoryNumber"));
+                product.setName((String) map.get("name"));
+                product.setProducer((String) map.get("producer"));
+                product.setPrice(((Number) map.get("price")).doubleValue());
+                product.setStock(((Number) map.get("stock")).intValue());
+                product.setDelivery((String) map.get("delivery"));
+                product.setSupplierName(supplier.getName());
+                product.setSupplierId(supplier.getId());
+                products.add(product);
+            }
+        }
+        return products;
+    }
+
+    // Получить все товары от поставщиков (для fallback)
+    public List<ExternalProduct> getAllProductsFromSuppliers() {
         List<Supplier> suppliers = supplierService.getAllSuppliers();
         List<ExternalProduct> allProducts = new ArrayList<>();
 
@@ -47,67 +103,21 @@ public class ExternalSupplierService {
                 continue;
             }
             try {
-                List<ExternalProduct> products = getMockFallbackProducts(supplier);
-                products.forEach(p -> p.setSupplierName(supplier.getName()));
-                allProducts.addAll(products);
+                String url = supplier.getApiUrl() + "/products?supplierId=" + supplier.getId();
+                ResponseEntity<ApiResponse> response = restTemplate.getForEntity(url, ApiResponse.class);
+
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().isSuccess()) {
+                    List<ExternalProduct> products = convertToProductList((List<?>) response.getBody().getData(), supplier);
+                    allProducts.addAll(products);
+                }
             } catch (Exception e) {
-                System.err.println("Ошибка получения fallback товаров от " + supplier.getName() + ": " + e.getMessage());
+                System.err.println("Ошибка получения товаров от " + supplier.getName() + ": " + e.getMessage());
             }
         }
         return allProducts;
     }
 
-    private List<ExternalProduct> searchFromSupplier(String query, String searchType, Supplier supplier) {
-        // ВРЕМЕННАЯ ЗАГЛУШКА (пока нет API ключей)
-        return getMockProducts(query, searchType, supplier);
-    }
-
-    private List<ExternalProduct> getMockProducts(String query, String searchType, Supplier supplier) {
-        List<ExternalProduct> mockProducts = Arrays.asList(
-                new ExternalProduct(1L, "M8020240", "Пружина подвески передняя", "MARSHALL", 2450.00, 3, "3-5 дней", supplier.getName(), supplier.getId()),
-                new ExternalProduct(2L, "050.034", "Опора резиновая", "SAMPA", 890.00, 5, "В наличии", supplier.getName(), supplier.getId()),
-                new ExternalProduct(3L, "M12332", "Тормозные колодки", "TRW", 1850.00, 2, "3-5 дней", supplier.getName(), supplier.getId()),
-                new ExternalProduct(4L, "D-OIL-001", "Моторное масло 10W-40 дизель", "MANNOL", 2450.00, 10, "В наличии", supplier.getName(), supplier.getId()),
-                new ExternalProduct(5L, "0357-1", "Воздушный фильтр", "MANN", 1200.00, 7, "3-5 дней", supplier.getName(), supplier.getId()),
-                new ExternalProduct(6L, "M-FILT-001", "Масляный фильтр", "BOSCH", 850.00, 15, "В наличии", supplier.getName(), supplier.getId())
-        );
-
-        if (query == null || query.trim().isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        String lowerQuery = query.toLowerCase().trim();
-
-        switch (searchType) {
-            case "startsWith":
-                return mockProducts.stream()
-                        .filter(p -> p.getFactoryNumber().toLowerCase().startsWith(lowerQuery))
-                        .collect(Collectors.toList());
-            case "exact":
-                return mockProducts.stream()
-                        .filter(p -> p.getFactoryNumber().equalsIgnoreCase(query) ||
-                                p.getName().equalsIgnoreCase(query))
-                        .collect(Collectors.toList());
-            case "name":
-                return mockProducts.stream()
-                        .filter(p -> p.getName().toLowerCase().contains(lowerQuery))
-                        .collect(Collectors.toList());
-            default:
-                return mockProducts.stream()
-                        .filter(p -> p.getFactoryNumber().toLowerCase().contains(lowerQuery) ||
-                                p.getName().toLowerCase().contains(lowerQuery))
-                        .collect(Collectors.toList());
-        }
-    }
-
-    private List<ExternalProduct> getMockFallbackProducts(Supplier supplier) {
-        // Товары для отображения на главной (когда нет поиска)
-        // Возвращаем первые 3 товара каждого поставщика
-        List<ExternalProduct> allMock = Arrays.asList(
-                new ExternalProduct(1L, "M8020240", "Пружина подвески передняя", "MARSHALL", 2450.00, 3, "3-5 дней", supplier.getName(), supplier.getId()),
-                new ExternalProduct(2L, "050.034", "Опора резиновая", "SAMPA", 890.00, 5, "В наличии", supplier.getName(), supplier.getId()),
-                new ExternalProduct(3L, "M12332", "Тормозные колодки", "TRW", 1850.00, 2, "3-5 дней", supplier.getName(), supplier.getId())
-        );
-        return allMock;
+    public List<ExternalProduct> getFallbackProducts() {
+        return getAllProductsFromSuppliers();
     }
 }
