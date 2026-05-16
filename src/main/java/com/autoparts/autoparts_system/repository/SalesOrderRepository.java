@@ -2,6 +2,9 @@ package com.autoparts.autoparts_system.repository;
 
 import com.autoparts.autoparts_system.model.SalesOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -20,12 +23,79 @@ public class SalesOrderRepository {
     private JdbcTemplate jdbcTemplate;
 
     public List<SalesOrder> findAll() {
-        String sql = "SELECT * FROM sales_orders";
+        String sql = "SELECT * FROM sales_orders ORDER BY created_at DESC";
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(SalesOrder.class));
     }
 
+    // Пагинация для заказов
+    public Page<SalesOrder> findAll(Pageable pageable) {
+        String countSql = "SELECT COUNT(*) FROM sales_orders";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class);
+
+        String sql = "SELECT * FROM sales_orders ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        List<SalesOrder> orders = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(SalesOrder.class),
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(orders, pageable, total);
+    }
+
+    // Поиск по заказам (по статусу или описанию)
+    public Page<SalesOrder> search(String search, Pageable pageable) {
+        String searchPattern = "%" + search.toLowerCase() + "%";
+
+        String countSql = "SELECT COUNT(*) FROM sales_orders WHERE LOWER(status) ILIKE ? OR LOWER(CAST(id AS TEXT)) ILIKE ?";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class, searchPattern, searchPattern);
+
+        String sql = "SELECT * FROM sales_orders WHERE LOWER(status) ILIKE ? OR LOWER(CAST(id AS TEXT)) ILIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        List<SalesOrder> orders = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(SalesOrder.class),
+                searchPattern, searchPattern,
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(orders, pageable, total);
+    }
+
+    // Фильтр по статусу
+    public Page<SalesOrder> findByStatus(String status, Pageable pageable) {
+        String countSql = "SELECT COUNT(*) FROM sales_orders WHERE status = ?";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class, status);
+
+        String sql = "SELECT * FROM sales_orders WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        List<SalesOrder> orders = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(SalesOrder.class),
+                status,
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(orders, pageable, total);
+    }
+
+    // Поиск с фильтром по статусу
+    public Page<SalesOrder> searchWithStatus(String search, String status, Pageable pageable) {
+        String searchPattern = "%" + search.toLowerCase() + "%";
+
+        String countSql = "SELECT COUNT(*) FROM sales_orders WHERE (LOWER(status) ILIKE ? OR LOWER(CAST(id AS TEXT)) ILIKE ?) AND status = ?";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class, searchPattern, searchPattern, status);
+
+        String sql = "SELECT * FROM sales_orders WHERE (LOWER(status) ILIKE ? OR LOWER(CAST(id AS TEXT)) ILIKE ?) AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        List<SalesOrder> orders = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(SalesOrder.class),
+                searchPattern, searchPattern, status,
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(orders, pageable, total);
+    }
+
     public List<SalesOrder> findByUserId(Long userId) {
-        String sql = "SELECT * FROM sales_orders WHERE user_id = ?";
+        String sql = "SELECT * FROM sales_orders WHERE user_id = ? ORDER BY created_at DESC";
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(SalesOrder.class), userId);
     }
 

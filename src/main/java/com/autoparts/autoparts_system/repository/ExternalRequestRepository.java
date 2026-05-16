@@ -105,4 +105,40 @@ public class ExternalRequestRepository {
 
         return new PageImpl<>(requests, pageable, total);
     }
+
+
+    // Фильтр по статусу
+    public Page<ExternalRequest> findByStatus(String status, Pageable pageable) {
+        String countSql = "SELECT COUNT(*) FROM external_requests WHERE status = ?";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class, status);
+
+        String sql = "SELECT * FROM external_requests WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        List<ExternalRequest> requests = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(ExternalRequest.class),
+                status,
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(requests, pageable, total);
+    }
+
+    // Поиск с фильтром по статусу
+    public Page<ExternalRequest> searchWithStatus(String search, String status, Pageable pageable) {
+        String searchPattern = "%" + search.toLowerCase() + "%";
+
+        String countSql = "SELECT COUNT(*) FROM external_requests WHERE (LOWER(product_name) ILIKE ? OR LOWER(factory_number) ILIKE ? OR LOWER(producer) ILIKE ? OR LOWER(supplier_name) ILIKE ?) AND status = ?";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class,
+                searchPattern, searchPattern, searchPattern, searchPattern, status);
+
+        String sql = "SELECT * FROM external_requests WHERE (LOWER(product_name) ILIKE ? OR LOWER(factory_number) ILIKE ? OR LOWER(producer) ILIKE ? OR LOWER(supplier_name) ILIKE ?) AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        List<ExternalRequest> requests = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(ExternalRequest.class),
+                searchPattern, searchPattern, searchPattern, searchPattern, status,
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(requests, pageable, total);
+    }
 }

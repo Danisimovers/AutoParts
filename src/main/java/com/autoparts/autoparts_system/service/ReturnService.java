@@ -11,6 +11,8 @@ import com.autoparts.autoparts_system.service.StockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -47,6 +49,22 @@ public class ReturnService {
         return returnRepository.findById(id);
     }
 
+    public Page<Return> getAllReturns(Pageable pageable) {
+        return returnRepository.findAll(pageable);
+    }
+
+    public Page<Return> searchReturns(String search, Pageable pageable) {
+        return returnRepository.search(search, pageable);
+    }
+
+    public Page<Return> getReturnsByStatus(String status, Pageable pageable) {
+        return returnRepository.findByStatus(status, pageable);
+    }
+
+    public Page<Return> searchReturnsWithStatus(String search, String status, Pageable pageable) {
+        return returnRepository.searchWithStatus(search, status, pageable);
+    }
+
     // Создать заявку на возврат
     @Transactional
     public void createReturn(Long orderItemId, Long userId, String reason) {
@@ -70,6 +88,8 @@ public class ReturnService {
 
         returnRepository.save(returnObj);
     }
+
+
 
     // Одобрить возврат
     @Transactional
