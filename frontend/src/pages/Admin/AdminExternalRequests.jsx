@@ -1,28 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import api from '../../api/api';
+import { useSearchAndFilters } from '../../hooks/useSearchAndFilters';
+import { Search, X } from 'lucide-react';
 
 function AdminExternalRequests() {
-    const [requests, setRequests] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        loadRequests();
-    }, []);
-
-    const loadRequests = async () => {
-        setLoading(true);
-        try {
-            const response = await api.get('/admin/external-requests');
-            if (response.data.success) {
-                setRequests(response.data.data);
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки запросов:', error);
-            alert('Ошибка загрузки запросов');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const {
+        data: requests,
+        loading,
+        totalItems,
+        totalPages,
+        currentPage,
+        searchTerm,
+        setSearchTerm,
+        clearSearch,
+        goToPage,
+        reload: loadRequests
+    } = useSearchAndFilters('/admin/external-requests', {
+        limit: 20,
+        enableSearch: true,
+        enableFilters: false
+    });
 
     const updateStatus = async (id, status) => {
         try {
@@ -78,7 +75,7 @@ function AdminExternalRequests() {
         }
     };
 
-    if (loading) return (
+    if (loading && requests.length === 0) return (
         <div className="p-8 text-center text-gray-400">
             Загрузка...
         </div>
@@ -86,14 +83,38 @@ function AdminExternalRequests() {
 
     return (
         <div className="p-6 flex-1">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Запросы товаров от поставщиков</h1>
-                <p className="text-sm text-gray-500 mt-1">Всего запросов: {requests.length}</p>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800">Запросы товаров от поставщиков</h1>
+                    <p className="text-sm text-gray-500 mt-1">Всего запросов: {totalItems}</p>
+                </div>
+            </div>
+
+            {/* Поиск */}
+            <div className="mb-4">
+                <div className="relative max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Поиск по названию товара, артикулу, производителю или поставщику..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-10 p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    />
+                    {searchTerm && (
+                        <button
+                            onClick={clearSearch}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {requests.length === 0 ? (
                 <div className="text-center text-gray-400 py-10 bg-white rounded-xl border border-gray-200">
-                    Нет запросов
+                    {searchTerm ? 'По вашему запросу ничего не найдено' : 'Нет запросов'}
                 </div>
             ) : (
                 <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
@@ -159,6 +180,17 @@ function AdminExternalRequests() {
                         ))}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {/* Пагинация */}
+            {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
+                    <button onClick={() => goToPage(1)} disabled={currentPage === 1} className="px-3 py-1.5 bg-gray-200 rounded-md text-sm disabled:opacity-50">«</button>
+                    <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-1.5 bg-gray-200 rounded-md text-sm disabled:opacity-50">←</button>
+                    <span className="px-4 py-1.5 text-sm">{currentPage} / {totalPages}</span>
+                    <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-1.5 bg-gray-200 rounded-md text-sm disabled:opacity-50">→</button>
+                    <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages} className="px-3 py-1.5 bg-gray-200 rounded-md text-sm disabled:opacity-50">»</button>
                 </div>
             )}
         </div>

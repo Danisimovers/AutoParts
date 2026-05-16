@@ -2,6 +2,9 @@ package com.autoparts.autoparts_system.repository;
 
 import com.autoparts.autoparts_system.model.ExternalRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -68,5 +71,38 @@ public class ExternalRequestRepository {
     public Long findUserIdById(Long id) {
         String sql = "SELECT user_id FROM external_requests WHERE id = ?";
         return jdbcTemplate.queryForObject(sql, Long.class, id);
+    }
+
+    // Пагинация для запросов
+    public Page<ExternalRequest> findAll(Pageable pageable) {
+        String countSql = "SELECT COUNT(*) FROM external_requests";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class);
+
+        String sql = "SELECT * FROM external_requests ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        List<ExternalRequest> requests = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(ExternalRequest.class),
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(requests, pageable, total);
+    }
+
+    // Поиск запросов с пагинацией
+    public Page<ExternalRequest> search(String search, Pageable pageable) {
+        String searchPattern = "%" + search.toLowerCase() + "%";
+
+        String countSql = "SELECT COUNT(*) FROM external_requests WHERE LOWER(product_name) ILIKE ? OR LOWER(factory_number) ILIKE ? OR LOWER(producer) ILIKE ? OR LOWER(supplier_name) ILIKE ?";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class, searchPattern, searchPattern, searchPattern, searchPattern);
+
+        String sql = "SELECT * FROM external_requests WHERE LOWER(product_name) ILIKE ? OR LOWER(factory_number) ILIKE ? OR LOWER(producer) ILIKE ? OR LOWER(supplier_name) ILIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        List<ExternalRequest> requests = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(ExternalRequest.class),
+                searchPattern, searchPattern, searchPattern, searchPattern,
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(requests, pageable, total);
     }
 }

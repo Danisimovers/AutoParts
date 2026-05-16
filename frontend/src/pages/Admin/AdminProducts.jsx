@@ -1,19 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
+import { useSearchAndFilters } from '../../hooks/useSearchAndFilters';
+import { Search, Filter, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 function AdminProducts() {
-    const [products, setProducts] = useState([]);
+    // Используем хук
+    const {
+        data: products,
+        loading,
+        totalItems,
+        totalPages,
+        currentPage,
+        searchTerm,
+        setSearchTerm,
+        filters,
+        updateFilter,
+        clearFilters: clearAllFilters,
+        getFilterCount,
+        goToPage
+    } = useSearchAndFilters('/admin/products', {
+        limit: 20,
+        defaultFilters: {
+            categoryId: '',
+            manufacturerId: '',
+            vehicleId: ''
+        }
+    });
+
+    // Локальные состояния
     const [categories, setCategories] = useState([]);
     const [manufacturers, setManufacturers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [vehicles, setVehicles] = useState([]);
     const [showForm, setShowForm] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
-
-    // Пагинация
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalItems, setTotalItems] = useState(0);
-    const itemsPerPage = 10;
+    const [showFilters, setShowFilters] = useState(false);
 
     const [formData, setFormData] = useState({
         sku: '',
@@ -25,33 +45,12 @@ function AdminProducts() {
         oemCode: ''
     });
 
+    // Загрузка справочников
     useEffect(() => {
-        loadProducts();
         loadCategories();
         loadManufacturers();
-    }, [currentPage]);
-
-    const loadProducts = async () => {
-        setLoading(true);
-        try {
-            const response = await api.get('/admin/products', {
-                params: {
-                    page: currentPage,
-                    limit: itemsPerPage
-                }
-            });
-            if (response.data.success) {
-                setProducts(response.data.data);
-                setTotalPages(response.data.totalPages || Math.ceil(response.data.total / itemsPerPage));
-                setTotalItems(response.data.total || response.data.data.length);
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки товаров:', error);
-            alert('Ошибка загрузки товаров');
-        } finally {
-            setLoading(false);
-        }
-    };
+        loadVehicles();
+    }, []);
 
     const loadCategories = async () => {
         try {
@@ -75,6 +74,17 @@ function AdminProducts() {
         }
     };
 
+    const loadVehicles = async () => {
+        try {
+            const response = await api.get('/vehicles');
+            if (response.data.success) {
+                setVehicles(response.data.data);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки автомобилей:', error);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -88,7 +98,6 @@ function AdminProducts() {
             setShowForm(false);
             setEditingProduct(null);
             setFormData({ sku: '', name: '', description: '', price: '', categoryId: '', manufacturerId: '', oemCode: '' });
-            loadProducts();
         } catch (error) {
             console.error('Ошибка сохранения:', error);
             alert('Ошибка сохранения товара');
@@ -101,9 +110,10 @@ function AdminProducts() {
             await api.delete(`/admin/products/${id}`);
             alert('Товар удален');
             if (products.length === 1 && currentPage > 1) {
-                setCurrentPage(currentPage - 1);
+                goToPage(currentPage - 1);
             } else {
-                loadProducts();
+                // Перезагружаем через хук
+                window.location.reload(); // или можно добавить reload в хук
             }
         } catch (error) {
             console.error('Ошибка удаления:', error);
@@ -125,10 +135,8 @@ function AdminProducts() {
         setShowForm(true);
     };
 
-    const goToPage = (page) => {
-        if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
-        }
+    const applyFilters = () => {
+        setShowFilters(false);
     };
 
     if (loading && products.length === 0) return (
@@ -156,6 +164,125 @@ function AdminProducts() {
                 </button>
             </div>
 
+            {/* ПОИСК И ФИЛЬТРЫ */}
+            <div className="mb-4 flex flex-col gap-3">
+                <div className="flex flex-col md:flex-row gap-3">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Поиск по артикулу (SKU), названию или OEM коду..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                        />
+                    </div>
+
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                    >
+                        <Filter size={18} className="text-gray-500" />
+                        <span className="text-sm text-gray-700">Фильтры</span>
+                        {getFilterCount() > 0 && (
+                            <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">
+                                {getFilterCount()}
+                            </span>
+                        )}
+                        {showFilters ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+                    </button>
+                </div>
+
+                {/* Активные фильтры */}
+                {getFilterCount() > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        <span className="text-xs text-gray-500">Активные фильтры:</span>
+                        {filters.categoryId && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                {categories.find(c => c.id == filters.categoryId)?.name}
+                                <X size={12} className="cursor-pointer hover:text-orange-900" onClick={() => updateFilter('categoryId', '')} />
+                            </span>
+                        )}
+                        {filters.manufacturerId && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                {manufacturers.find(m => m.id == filters.manufacturerId)?.name}
+                                <X size={12} className="cursor-pointer hover:text-orange-900" onClick={() => updateFilter('manufacturerId', '')} />
+                            </span>
+                        )}
+                        {filters.vehicleId && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                {vehicles.find(v => v.id == filters.vehicleId)?.make} {vehicles.find(v => v.id == filters.vehicleId)?.model}
+                                <X size={12} className="cursor-pointer hover:text-orange-900" onClick={() => updateFilter('vehicleId', '')} />
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* Панель фильтров */}
+                {showFilters && (
+                    <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 mt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Категория</label>
+                                <select
+                                    value={filters.categoryId}
+                                    onChange={(e) => updateFilter('categoryId', e.target.value)}
+                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
+                                >
+                                    <option value="">Все категории</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Производитель</label>
+                                <select
+                                    value={filters.manufacturerId}
+                                    onChange={(e) => updateFilter('manufacturerId', e.target.value)}
+                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
+                                >
+                                    <option value="">Все производители</option>
+                                    {manufacturers.map(man => (
+                                        <option key={man.id} value={man.id}>{man.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Автомобиль</label>
+                                <select
+                                    value={filters.vehicleId}
+                                    onChange={(e) => updateFilter('vehicleId', e.target.value)}
+                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
+                                >
+                                    <option value="">Все автомобили</option>
+                                    {vehicles.map(vehicle => (
+                                        <option key={vehicle.id} value={vehicle.id}>
+                                            {vehicle.make} {vehicle.model}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-5 justify-end">
+                            <button
+                                onClick={clearAllFilters}
+                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm"
+                            >
+                                Сбросить все
+                            </button>
+                            <button
+                                onClick={applyFilters}
+                                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition text-sm"
+                            >
+                                Применить
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Форма добавления/редактирования */}
             {showForm && (
                 <form onSubmit={handleSubmit} className="bg-gray-50 p-6 rounded-xl mb-6 border border-gray-200">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">
@@ -241,6 +368,7 @@ function AdminProducts() {
                 </form>
             )}
 
+            {/* Таблица товаров */}
             <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
                 <table className="w-full">
                     <thead>
@@ -260,7 +388,7 @@ function AdminProducts() {
                             <td className="p-3 text-sm font-mono text-gray-600">{product.sku}</td>
                             <td className="p-3 text-sm font-medium text-gray-800">{product.name}</td>
                             <td className="text-right p-3 text-sm font-semibold text-gray-800">
-                                {product.price.toLocaleString()} ₽
+                                {product.price?.toLocaleString()} ₽
                             </td>
                             <td className="text-center p-3 text-sm text-gray-600">
                                 {product.stock}
@@ -287,13 +415,15 @@ function AdminProducts() {
 
             {products.length === 0 && !loading && (
                 <div className="text-center py-10 text-gray-400">
-                    Нет товаров. Нажмите "Добавить товар" чтобы создать первый.
+                    {searchTerm || getFilterCount() > 0
+                        ? 'Ничего не найдено. Попробуйте изменить параметры поиска.'
+                        : 'Нет товаров. Нажмите "Добавить товар" чтобы создать первый.'}
                 </div>
             )}
 
             {/* Пагинация */}
             {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-6">
+                <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
                     <button
                         onClick={() => goToPage(1)}
                         disabled={currentPage === 1}
@@ -318,13 +448,19 @@ function AdminProducts() {
                     </button>
 
                     <div className="flex gap-1">
-                        {[...Array(totalPages)].map((_, i) => {
-                            const page = i + 1;
-                            if (
-                                page === 1 ||
-                                page === totalPages ||
-                                (page >= currentPage - 1 && page <= currentPage + 1)
-                            ) {
+                        {[...Array(Math.min(totalPages, 10))].map((_, i) => {
+                            let page;
+                            if (totalPages <= 7) {
+                                page = i + 1;
+                            } else if (currentPage <= 4) {
+                                page = i + 1;
+                            } else if (currentPage >= totalPages - 3) {
+                                page = totalPages - 9 + i;
+                            } else {
+                                page = currentPage - 4 + i;
+                            }
+
+                            if (page >= 1 && page <= totalPages) {
                                 return (
                                     <button
                                         key={page}
@@ -338,11 +474,6 @@ function AdminProducts() {
                                         {page}
                                     </button>
                                 );
-                            } else if (
-                                (page === currentPage - 2 && currentPage > 3) ||
-                                (page === currentPage + 2 && currentPage < totalPages - 2)
-                            ) {
-                                return <span key={page} className="px-1 text-gray-400">...</span>;
                             }
                             return null;
                         })}

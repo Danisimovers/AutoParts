@@ -1,32 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import api from '../../api/api';
+import { useSearchAndFilters } from '../../hooks/useSearchAndFilters';
+import { Search, X } from 'lucide-react';
 
 function AdminCategories() {
-    const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(true);
+    // Используем хук с полноценным поиском на бэкенде
+    const {
+        data: categories,
+        loading,
+        totalItems,
+        totalPages,
+        currentPage,
+        searchTerm,
+        setSearchTerm,
+        clearSearch,
+        goToPage,
+        reload: loadCategories
+    } = useSearchAndFilters('/admin/categories', {
+        limit: 20,
+        enableSearch: true,
+        enableFilters: false
+    });
+
     const [showForm, setShowForm] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
     const [formData, setFormData] = useState({ name: '', description: '' });
     const [error, setError] = useState('');
-
-    useEffect(() => {
-        loadCategories();
-    }, []);
-
-    const loadCategories = async () => {
-        setLoading(true);
-        try {
-            const response = await api.get('/admin/categories');
-            if (response.data.success) {
-                setCategories(response.data.data);
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки категорий:', error);
-            alert('Ошибка загрузки категорий');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -53,7 +52,11 @@ function AdminCategories() {
         try {
             await api.delete(`/admin/categories/${id}`);
             alert('Категория удалена');
-            loadCategories();
+            if (categories.length === 1 && currentPage > 1) {
+                goToPage(currentPage - 1);
+            } else {
+                loadCategories();
+            }
         } catch (error) {
             alert('Ошибка удаления');
         }
@@ -65,7 +68,7 @@ function AdminCategories() {
         setShowForm(true);
     };
 
-    if (loading) return (
+    if (loading && categories.length === 0) return (
         <div className="p-8 text-center text-gray-400">
             Загрузка...
         </div>
@@ -76,7 +79,7 @@ function AdminCategories() {
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">Управление категориями</h1>
-                    <p className="text-sm text-gray-500 mt-1">Всего категорий: {categories.length}</p>
+                    <p className="text-sm text-gray-500 mt-1">Всего категорий: {totalItems}</p>
                 </div>
                 <button
                     onClick={() => {
@@ -88,6 +91,28 @@ function AdminCategories() {
                 >
                     + Добавить категорию
                 </button>
+            </div>
+
+            {/* Поиск */}
+            <div className="mb-4">
+                <div className="relative max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Поиск по названию или описанию..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-10 p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    />
+                    {searchTerm && (
+                        <button
+                            onClick={clearSearch}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {showForm && (
@@ -163,6 +188,97 @@ function AdminCategories() {
                     </tbody>
                 </table>
             </div>
+
+            {categories.length === 0 && !loading && (
+                <div className="text-center py-10 text-gray-400">
+                    {searchTerm
+                        ? 'По вашему запросу ничего не найдено'
+                        : 'Нет категорий. Нажмите "Добавить категорию" чтобы создать первую.'}
+                </div>
+            )}
+
+            {/* Пагинация */}
+            {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
+                    <button
+                        onClick={() => goToPage(1)}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1.5 rounded-md text-sm transition ${
+                            currentPage === 1
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 cursor-pointer'
+                        }`}
+                    >
+                        « Первая
+                    </button>
+                    <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1.5 rounded-md text-sm transition ${
+                            currentPage === 1
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 cursor-pointer'
+                        }`}
+                    >
+                        ← Назад
+                    </button>
+
+                    <div className="flex gap-1">
+                        {[...Array(Math.min(totalPages, 10))].map((_, i) => {
+                            let page;
+                            if (totalPages <= 7) {
+                                page = i + 1;
+                            } else if (currentPage <= 4) {
+                                page = i + 1;
+                            } else if (currentPage >= totalPages - 3) {
+                                page = totalPages - 9 + i;
+                            } else {
+                                page = currentPage - 4 + i;
+                            }
+
+                            if (page >= 1 && page <= totalPages) {
+                                return (
+                                    <button
+                                        key={page}
+                                        onClick={() => goToPage(page)}
+                                        className={`w-8 h-8 rounded-md text-sm transition ${
+                                            currentPage === page
+                                                ? 'bg-orange-500 text-white cursor-default'
+                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 cursor-pointer'
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                                );
+                            }
+                            return null;
+                        })}
+                    </div>
+
+                    <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-1.5 rounded-md text-sm transition ${
+                            currentPage === totalPages
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 cursor-pointer'
+                        }`}
+                    >
+                        Вперед →
+                    </button>
+                    <button
+                        onClick={() => goToPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-1.5 rounded-md text-sm transition ${
+                            currentPage === totalPages
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 cursor-pointer'
+                        }`}
+                    >
+                        Последняя »
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

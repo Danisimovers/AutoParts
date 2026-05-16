@@ -2,6 +2,9 @@ package com.autoparts.autoparts_system.repository;
 
 import com.autoparts.autoparts_system.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -16,8 +19,47 @@ public class UserRepository {
     private JdbcTemplate jdbcTemplate;
 
     public List<User> findAll() {
-        String sql = "SELECT * FROM users";
+        String sql = "SELECT * FROM users ORDER BY id";
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(User.class));
+    }
+
+    // НОВЫЙ МЕТОД: Пагинация для пользователей
+    public Page<User> findAll(Pageable pageable) {
+        String countSql = "SELECT COUNT(*) FROM users";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class);
+
+        String sql = "SELECT * FROM users ORDER BY id LIMIT ? OFFSET ?";
+        List<User> users = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(User.class),
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(users, pageable, total);
+    }
+
+    // НОВЫЙ МЕТОД: Поиск пользователей с пагинацией
+    public Page<User> search(String search, Pageable pageable) {
+        String searchPattern = "%" + search.toLowerCase() + "%";
+
+        String countSql = "SELECT COUNT(*) FROM users WHERE LOWER(login) ILIKE ? OR LOWER(email) ILIKE ? OR LOWER(phone) ILIKE ?";
+        int total = jdbcTemplate.queryForObject(countSql, Integer.class, searchPattern, searchPattern, searchPattern);
+
+        String sql = "SELECT * FROM users WHERE LOWER(login) ILIKE ? OR LOWER(email) ILIKE ? OR LOWER(phone) ILIKE ? ORDER BY id LIMIT ? OFFSET ?";
+        List<User> users = jdbcTemplate.query(sql,
+                new BeanPropertyRowMapper<>(User.class),
+                searchPattern, searchPattern, searchPattern,
+                pageable.getPageSize(),
+                pageable.getOffset()
+        );
+
+        return new PageImpl<>(users, pageable, total);
+    }
+
+    // НОВЫЙ МЕТОД: Подсчет всех пользователей
+    public long count() {
+        String sql = "SELECT COUNT(*) FROM users";
+        return jdbcTemplate.queryForObject(sql, Long.class);
     }
 
     public Optional<User> findById(Long id) {
@@ -48,7 +90,6 @@ public class UserRepository {
         }
     }
 
-    // метод findByPhone
     public User findByPhone(String phone) {
         String sql = "SELECT * FROM users WHERE phone = ?";
         try {

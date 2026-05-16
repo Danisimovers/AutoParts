@@ -5,6 +5,8 @@ import com.autoparts.autoparts_system.repository.InventoryRepository;
 import com.autoparts.autoparts_system.model.Product;
 import com.autoparts.autoparts_system.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
@@ -21,6 +23,27 @@ public class ProductService {
         return productRepository.findAll();
     }
 
+    public Page<Product> getProducts(Pageable pageable) {
+        return productRepository.findAll(pageable);
+    }
+
+    public Page<Product> searchProducts(String search, Pageable pageable) {
+        return productRepository.searchWithPagination(search, pageable);
+    }
+
+    // Сервис только вызывает метод репозитория, без SQL логики
+    public Page<Product> searchWithFilters(String search, Long categoryId, Long manufacturerId, Long vehicleId, Pageable pageable) {
+        return productRepository.searchWithFilters(search, categoryId, manufacturerId, vehicleId, pageable);
+    }
+
+    public Page<Product> filterBy(Long categoryId, Long manufacturerId, Long vehicleId, Pageable pageable) {
+        return productRepository.filterBy(categoryId, manufacturerId, vehicleId, pageable);
+    }
+
+    public long count() {
+        return productRepository.count();
+    }
+
     public Product getProductById(Long id) {
         return productRepository.findById(id);
     }
@@ -34,7 +57,6 @@ public class ProductService {
         }
         productRepository.save(product);
 
-        // Автоматически создаем запись об остатках
         Inventory inventory = new Inventory();
         inventory.setProductId(product.getId());
         inventory.setQuantity(0);

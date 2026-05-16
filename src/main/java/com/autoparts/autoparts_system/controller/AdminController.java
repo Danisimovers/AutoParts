@@ -7,6 +7,9 @@ import com.autoparts.autoparts_system.dto.response.ProductDTO;
 import com.autoparts.autoparts_system.model.*;
 import com.autoparts.autoparts_system.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,19 +39,55 @@ public class AdminController {
     private UserService userService;
 
     @Autowired
+    private SearchService searchService;
+
+    @Autowired
     private SupplierService supplierService;
 
     @Autowired
     private ExternalRequestService externalRequestService;  // ← новый сервис
 
     // ========== Товары ==========
+    // В AdminController добавьте или измените метод getAllProducts:
+
     @GetMapping("/products")
-    public ResponseEntity<ApiResponse> getAllProducts() {
-        List<Product> products = productService.getAllProducts();
-        List<ProductDTO> dtos = products.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.success("Товары загружены", dtos));
+    public ResponseEntity<ApiResponse> getAllProducts(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long manufacturerId,
+            @RequestParam(required = false) Long vehicleId
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(page - 1, limit);
+            Page<Product> productPage;
+
+            // Если есть поисковый запрос
+            if (search != null && !search.trim().isEmpty()) {
+                productPage = productService.searchWithFilters(search, categoryId, manufacturerId, vehicleId, pageable);
+            }
+            // Если есть фильтры (без поиска)
+            else if (categoryId != null || manufacturerId != null || vehicleId != null) {
+                productPage = productService.filterBy(categoryId, manufacturerId, vehicleId, pageable);
+            }
+            // Обычная пагинация
+            else {
+                productPage = productService.getProducts(pageable);
+            }
+
+            Map<String, Object> response = Map.of(
+                    "data", productPage.getContent().stream().map(this::convertToDTO).collect(Collectors.toList()),
+                    "total", productPage.getTotalElements(),
+                    "totalPages", productPage.getTotalPages(),
+                    "currentPage", page
+            );
+
+            return ResponseEntity.ok(ApiResponse.success("Товары загружены", response));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка загрузки товаров: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/products")
@@ -112,9 +151,33 @@ public class AdminController {
 
     // ========== Пользователи ==========
     @GetMapping("/users")
-    public ResponseEntity<ApiResponse> getAllUsers() {
-        List<User> users = userService.getAllUsers();
-        return ResponseEntity.ok(ApiResponse.success("Пользователи загружены", users));
+    public ResponseEntity<ApiResponse> getAllUsers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String search
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(page - 1, limit);
+            Page<User> userPage;
+
+            // Если есть поиск
+            if (search != null && !search.trim().isEmpty()) {
+                userPage = userService.searchUsers(search, pageable);
+            } else {
+                userPage = userService.getAllUsers(pageable);
+            }
+
+            Map<String, Object> response = Map.of(
+                    "data", userPage.getContent(),
+                    "total", userPage.getTotalElements(),
+                    "totalPages", userPage.getTotalPages(),
+                    "currentPage", page
+            );
+
+            return ResponseEntity.ok(ApiResponse.success("Пользователи загружены", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка загрузки пользователей: " + e.getMessage()));
+        }
     }
 
     @PutMapping("/users/{id}/role")
@@ -129,9 +192,33 @@ public class AdminController {
 
     // ========== Поставщики ==========
     @GetMapping("/suppliers")
-    public ResponseEntity<ApiResponse> getAllSuppliers() {
-        List<Supplier> suppliers = supplierService.getAllSuppliers();
-        return ResponseEntity.ok(ApiResponse.success("Поставщики загружены", suppliers));
+    public ResponseEntity<ApiResponse> getAllSuppliers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String search
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(page - 1, limit);
+            Page<Supplier> supplierPage;
+
+            // Если есть поиск
+            if (search != null && !search.trim().isEmpty()) {
+                supplierPage = supplierService.searchSuppliers(search, pageable);
+            } else {
+                supplierPage = supplierService.getAllSuppliers(pageable);
+            }
+
+            Map<String, Object> response = Map.of(
+                    "data", supplierPage.getContent(),
+                    "total", supplierPage.getTotalElements(),
+                    "totalPages", supplierPage.getTotalPages(),
+                    "currentPage", page
+            );
+
+            return ResponseEntity.ok(ApiResponse.success("Поставщики загружены", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка загрузки поставщиков: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/suppliers")
@@ -166,9 +253,33 @@ public class AdminController {
 
     // ========== Категории ==========
     @GetMapping("/categories")
-    public ResponseEntity<ApiResponse> getAllCategories() {
-        List<Category> categories = categoryService.getAllCategories();
-        return ResponseEntity.ok(ApiResponse.success("Категории загружены", categories));
+    public ResponseEntity<ApiResponse> getAllCategories(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String search
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(page - 1, limit);
+            Page<Category> categoryPage;
+
+            // Если есть поиск
+            if (search != null && !search.trim().isEmpty()) {
+                categoryPage = categoryService.searchCategories(search, pageable);
+            } else {
+                categoryPage = categoryService.getAllCategories(pageable);
+            }
+
+            Map<String, Object> response = Map.of(
+                    "data", categoryPage.getContent(),
+                    "total", categoryPage.getTotalElements(),
+                    "totalPages", categoryPage.getTotalPages(),
+                    "currentPage", page
+            );
+
+            return ResponseEntity.ok(ApiResponse.success("Категории загружены", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка загрузки категорий: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/categories")
@@ -203,9 +314,33 @@ public class AdminController {
 
     // ========== Производители ==========
     @GetMapping("/manufacturers")
-    public ResponseEntity<ApiResponse> getAllManufacturers() {
-        List<Manufacturer> manufacturers = manufacturerService.getAllManufacturers();
-        return ResponseEntity.ok(ApiResponse.success("Производители загружены", manufacturers));
+    public ResponseEntity<ApiResponse> getAllManufacturers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String search
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(page - 1, limit);
+            Page<Manufacturer> manufacturerPage;
+
+            // Если есть поиск
+            if (search != null && !search.trim().isEmpty()) {
+                manufacturerPage = manufacturerService.searchManufacturers(search, pageable);
+            } else {
+                manufacturerPage = manufacturerService.getAllManufacturers(pageable);
+            }
+
+            Map<String, Object> response = Map.of(
+                    "data", manufacturerPage.getContent(),
+                    "total", manufacturerPage.getTotalElements(),
+                    "totalPages", manufacturerPage.getTotalPages(),
+                    "currentPage", page
+            );
+
+            return ResponseEntity.ok(ApiResponse.success("Производители загружены", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка загрузки производителей: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/manufacturers")
@@ -238,10 +373,35 @@ public class AdminController {
         }
     }
 
-    // ========== Запросы поставщикам (теперь через сервис) ==========
+    // ========== Запросы поставщикам ==========
     @GetMapping("/external-requests")
-    public ResponseEntity<ApiResponse> getAllExternalRequests() {
-        return ResponseEntity.ok(ApiResponse.success("Запросы загружены", externalRequestService.getAllExternalRequests()));
+    public ResponseEntity<ApiResponse> getAllExternalRequests(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String search
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(page - 1, limit);
+            Page<ExternalRequest> requestsPage;
+
+            // Если есть поиск
+            if (search != null && !search.trim().isEmpty()) {
+                requestsPage = externalRequestService.searchExternalRequests(search, pageable);
+            } else {
+                requestsPage = externalRequestService.getAllExternalRequests(pageable);
+            }
+
+            Map<String, Object> response = Map.of(
+                    "data", requestsPage.getContent(),
+                    "total", requestsPage.getTotalElements(),
+                    "totalPages", requestsPage.getTotalPages(),
+                    "currentPage", page
+            );
+
+            return ResponseEntity.ok(ApiResponse.success("Запросы загружены", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка загрузки запросов: " + e.getMessage()));
+        }
     }
 
     @PutMapping("/external-requests/{id}/status")

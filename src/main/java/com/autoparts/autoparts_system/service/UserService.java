@@ -17,6 +17,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class UserService {
@@ -257,6 +259,21 @@ public class UserService {
         }
         user.setRole(Role.valueOf(roleName));
         userRepository.update(user);
+    }
+
+    // Пагинация для пользователей
+    public Page<User> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(pageable);
+    }
+
+    // Поиск пользователей с пагинацией
+    public Page<User> searchUsers(String search, Pageable pageable) {
+        return userRepository.search(search, pageable);
+    }
+
+    // Подсчет всех пользователей
+    public long count() {
+        return userRepository.count();
     }
 
     @Transactional

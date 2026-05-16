@@ -13,6 +13,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 @Service
 public class ExternalRequestService {
 
@@ -191,6 +194,16 @@ public class ExternalRequestService {
         notificationRepository.save(notification);
 
         return Map.of("productId", productId);
+    }
+
+    // Пагинация для запросов
+    public Page<ExternalRequest> getAllExternalRequests(Pageable pageable) {
+        return externalRequestRepository.findAll(pageable);
+    }
+
+    // Поиск запросов с пагинацией
+    public Page<ExternalRequest> searchExternalRequests(String search, Pageable pageable) {
+        return externalRequestRepository.search(search, pageable);
     }
 
     private String getStatusText(String status) {
