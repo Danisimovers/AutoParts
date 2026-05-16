@@ -19,6 +19,10 @@ import UserVinRequestChat from './pages/UserVinRequestChat';
 import Footer from './components/Footer';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import MyRequests from './pages/MyRequests';
+import MyVehicles from './pages/MyVehicles';
+import AdminVehicles from './pages/Admin/AdminVehicles';
+
 
 // ADMIN
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -70,6 +74,11 @@ function NavBar({ showVinForm, setShowVinForm }) {
                             Запрос по VIN
                         </button>
                     )}
+                    {isAuthenticated && (
+                        <Link to="/my-vehicles" className="text-white font-medium hover:text-gray-300 transition">
+                            Мои автомобили
+                        </Link>
+                    )}
                 </div>
 
                 <div className="dropdown-container flex items-center gap-4 relative">
@@ -92,6 +101,13 @@ function NavBar({ showVinForm, setShowVinForm }) {
                                         className="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition"
                                     >
                                         Личный кабинет
+                                    </Link>
+                                    <Link
+                                        to="/my-requests"
+                                        onClick={() => setShowDropdown(false)}
+                                        className="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition border-t border-gray-100"
+                                    >
+                                        Мои заявки
                                     </Link>
                                     {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
                                         <Link
@@ -153,7 +169,9 @@ function AppRoutes() {
             <Route path="/terms" element={<TermsOfService />} />
 
             <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+            <Route path="/my-requests" element={isAuthenticated ? <MyRequests /> : <Navigate to="/login" />} />
             <Route path="/my-orders" element={isAuthenticated ? <MyOrders /> : <Navigate to="/login" />} />
+            <Route path="/my-vehicles" element={isAuthenticated ? <MyVehicles /> : <Navigate to="/login" />} />
             <Route path="/order/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
             <Route path="/vin-requests/:id" element={isAuthenticated ? <UserVinRequestChat /> : <Navigate to="/login" />} />
 
@@ -166,6 +184,7 @@ function AppRoutes() {
                 <Route path="manufacturers" element={<AdminManufacturers />} />
                 <Route path="reports" element={<AdminReports />} />
                 <Route path="external-requests" element={<AdminExternalRequests />} />
+                <Route path="vehicles" element={<AdminVehicles />} />
             </Route>
 
             <Route path="/manager" element={isAuthenticated && (user?.role === 'MANAGER' || user?.role === 'ADMIN') ? <ManagerLayout /> : <Navigate to="/" />}>

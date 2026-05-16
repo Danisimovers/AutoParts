@@ -1,17 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 
 function VinRequestForm({ onClose, onSuccess }) {
     const [vin, setVin] = useState('');
     const [description, setDescription] = useState('');
+    const [userVehicles, setUserVehicles] = useState([]);
+    const [selectedVehicleId, setSelectedVehicleId] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    // Загружаем автомобили пользователя
+    useEffect(() => {
+        loadUserVehicles();
+    }, []);
+
+    const loadUserVehicles = async () => {
+        try {
+            const response = await api.get('/user-vehicles');
+            if (response.data.success) {
+                setUserVehicles(response.data.data || []);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки автомобилей:', error);
+        }
+    };
 
     // Валидация VIN номера
     const validateVin = (vin) => {
         const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/;
         return vinRegex.test(vin);
+    };
+
+    // При выборе автомобиля из списка, подставляем его VIN
+    const handleVehicleSelect = (vehicleId) => {
+        setSelectedVehicleId(vehicleId);
+        const selectedVehicle = userVehicles.find(v => v.id === parseInt(vehicleId));
+        if (selectedVehicle && selectedVehicle.vin) {
+            setVin(selectedVehicle.vin);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -38,11 +65,16 @@ function VinRequestForm({ onClose, onSuccess }) {
         setLoading(true);
 
         try {
-            const response = await api.post('/vin-requests', { vin, description });
+            const response = await api.post('/vin-requests', {
+                vin,
+                description,
+                userVehicleId: selectedVehicleId || null
+            });
             if (response.data.success) {
                 setSuccess(response.data.message);
                 setVin('');
                 setDescription('');
+                setSelectedVehicleId('');
                 setTimeout(() => {
                     if (onClose) onClose();
                     if (onSuccess) onSuccess();
@@ -77,6 +109,28 @@ function VinRequestForm({ onClose, onSuccess }) {
                 )}
 
                 <form onSubmit={handleSubmit}>
+                    {/* Выбор автомобиля из сохраненных */}
+                    {userVehicles.length > 0 && (
+                        <div className="mb-4">
+                            <label className="block mb-2 text-[#555] font-medium">
+                                Выбрать из моих автомобилей
+                            </label>
+                            <select
+                                value={selectedVehicleId}
+                                onChange={(e) => handleVehicleSelect(e.target.value)}
+                                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            >
+                                <option value="">-- Выберите автомобиль --</option>
+                                {userVehicles.map(vehicle => (
+                                    <option key={vehicle.id} value={vehicle.id}>
+                                        {vehicle.nickname || `${vehicle.make} ${vehicle.model || ''}`}
+                                        {vehicle.vin ? ` (${vehicle.vin.slice(-6)})` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div className="mb-4">
                         <label className="block mb-2 text-[#555] font-medium">
                             VIN номер автомобиля *

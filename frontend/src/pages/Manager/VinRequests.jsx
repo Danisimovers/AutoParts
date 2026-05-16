@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../../api/api';
 import { useNavigate } from 'react-router-dom';
 import { useSearchAndFilters } from '../../hooks/useSearchAndFilters';
 import { Search, Filter, ChevronDown, ChevronUp, X } from 'lucide-react';

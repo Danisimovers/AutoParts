@@ -55,15 +55,28 @@ public class VinRequestController {
 
     @PostMapping
     public ResponseEntity<ApiResponse> createVinRequest(
-            @RequestBody Map<String, String> request,
+            @RequestBody Map<String, Object> request,
             @RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.substring(7);
             Long userId = jwtService.extractUserId(token);
 
-            String vin = request.get("vin");
-            String description = request.get("description");
+            String vin = (String) request.get("vin");
+            String description = (String) request.get("description");
 
+            // Исправлено: правильная обработка userVehicleId (может быть String или Number)
+            Long userVehicleId = null;
+            Object vehicleIdObj = request.get("userVehicleId");
+            if (vehicleIdObj != null) {
+                if (vehicleIdObj instanceof Number) {
+                    userVehicleId = ((Number) vehicleIdObj).longValue();
+                } else if (vehicleIdObj instanceof String) {
+                    String vehicleIdStr = (String) vehicleIdObj;
+                    if (!vehicleIdStr.isEmpty()) {
+                        userVehicleId = Long.parseLong(vehicleIdStr);
+                    }
+                }
+            }
             // Проверка VIN
             if (vin == null || vin.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("VIN номер обязателен"));
@@ -79,6 +92,7 @@ public class VinRequestController {
 
             VinRequest vinRequest = new VinRequest();
             vinRequest.setUserId(userId);
+            vinRequest.setUserVehicleId(userVehicleId);
             vinRequest.setVin(vin.toUpperCase());
             vinRequest.setDescription(description);
             vinRequest.setStatus("PENDING");
@@ -166,6 +180,16 @@ public class VinRequestController {
             return ResponseEntity.ok(ApiResponse.success("Сообщение отправлено", null));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка отправки: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<ApiResponse> getUserVinRequests(@PathVariable Long userId) {
+        try {
+            List<VinRequest> requests = vinRequestRepository.findByUserId(userId);
+            return ResponseEntity.ok(ApiResponse.success("Заявки загружены", requests));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка загрузки: " + e.getMessage()));
         }
     }
 }

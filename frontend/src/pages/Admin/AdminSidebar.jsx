@@ -1,5 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { Car } from 'lucide-react';
+
 
 function AdminSidebar() {
     const menuItems = [
@@ -10,7 +12,9 @@ function AdminSidebar() {
         { path: '/admin/stock', name: 'Остатки' },
         { path: '/admin/suppliers', name: 'Поставщики' },
         { path: '/admin/external-requests', name: 'Запросы поставщикам' },
+        { path: '/admin/vehicles', name: 'Автомобили' },
         { path: '/admin/reports', name: 'Отчеты' },
+
     ];
 
     return (

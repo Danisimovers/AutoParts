@@ -92,4 +92,13 @@ public class ReturnController {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<ApiResponse> getUserReturns(@PathVariable Long userId) {
+        try {
+            List<Return> returns = returnService.getUserReturns(userId);
+            return ResponseEntity.ok(ApiResponse.success("Заявки на возврат загружены", returns));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка загрузки: " + e.getMessage()));
+        }
+    }
 }

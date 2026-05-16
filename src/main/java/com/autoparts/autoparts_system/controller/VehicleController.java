@@ -4,6 +4,7 @@ import com.autoparts.autoparts_system.dto.request.CreateVehicleRequest;
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.dto.response.VehicleDTO;
 import com.autoparts.autoparts_system.model.Vehicle;
+import com.autoparts.autoparts_system.repository.VehicleRepository;
 import com.autoparts.autoparts_system.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,13 +22,20 @@ public class VehicleController {
     @Autowired
     private VehicleService vehicleService;
 
+    @Autowired
+    private VehicleRepository vehicleRepository;
+
     @GetMapping
     public ResponseEntity<ApiResponse> getAllVehicles() {
-        List<Vehicle> vehicles = vehicleService.getAllVehicles();
-        List<VehicleDTO> dtos = vehicles.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.success("Автомобили успешно загружены", dtos));
+        try {
+            List<Vehicle> vehicles = vehicleService.getAllVehicles();
+            List<VehicleDTO> dtos = vehicles.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(ApiResponse.success("Автомобили успешно загружены", dtos));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка загрузки: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/{id}")

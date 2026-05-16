@@ -1,11 +1,13 @@
 package com.autoparts.autoparts_system.controller;
 
 import com.autoparts.autoparts_system.dto.request.CreateProductRequest;
+import com.autoparts.autoparts_system.dto.request.CreateVehicleRequest;
 import com.autoparts.autoparts_system.dto.request.UpdateProductRequest;
 import com.autoparts.autoparts_system.dto.response.ApiResponse;
 import com.autoparts.autoparts_system.dto.response.ProductDTO;
 import com.autoparts.autoparts_system.model.*;
 import com.autoparts.autoparts_system.service.*;
+import com.autoparts.autoparts_system.repository.VehicleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,11 +47,15 @@ public class AdminController {
     private SupplierService supplierService;
 
     @Autowired
-    private ExternalRequestService externalRequestService;  // ← новый сервис
+    private ExternalRequestService externalRequestService;
+
+    @Autowired
+    private VehicleService vehicleService;
+
+    @Autowired
+    private VehicleRepository vehicleRepository;
 
     // ========== Товары ==========
-    // В AdminController добавьте или измените метод getAllProducts:
-
     @GetMapping("/products")
     public ResponseEntity<ApiResponse> getAllProducts(
             @RequestParam(defaultValue = "1") int page,
@@ -368,6 +374,83 @@ public class AdminController {
         try {
             manufacturerService.deleteManufacturer(id);
             return ResponseEntity.ok(ApiResponse.success("Производитель удален", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // ========== Автомобили (Vehicles) ==========
+    @GetMapping("/vehicles")
+    public ResponseEntity<ApiResponse> getAllVehicles(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String search
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(page - 1, limit);
+            Page<Vehicle> vehiclesPage;
+
+            // Если есть поиск
+            if (search != null && !search.trim().isEmpty()) {
+                vehiclesPage = vehicleRepository.search(search, pageable);
+            } else {
+                vehiclesPage = vehicleRepository.findAll(pageable);
+            }
+
+            Map<String, Object> response = Map.of(
+                    "data", vehiclesPage.getContent(),
+                    "total", vehiclesPage.getTotalElements(),
+                    "totalPages", vehiclesPage.getTotalPages(),
+                    "currentPage", page
+            );
+
+            return ResponseEntity.ok(ApiResponse.success("Автомобили загружены", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Ошибка загрузки автомобилей: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/vehicles")
+    public ResponseEntity<ApiResponse> createVehicle(@RequestBody CreateVehicleRequest request) {
+        try {
+            Vehicle vehicle = new Vehicle();
+            vehicle.setMake(request.getMake());
+            vehicle.setModel(request.getModel());
+            vehicle.setGeneration(request.getGeneration());
+            vehicle.setYearFrom(request.getYearFrom());
+            vehicle.setYearTo(request.getYearTo());
+            vehicle.setEngine(request.getEngine());
+
+            Vehicle created = vehicleService.createVehicle(vehicle);
+            return ResponseEntity.ok(ApiResponse.success("Автомобиль создан", created));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/vehicles/{id}")
+    public ResponseEntity<ApiResponse> updateVehicle(@PathVariable Long id, @RequestBody CreateVehicleRequest request) {
+        try {
+            Vehicle vehicle = new Vehicle();
+            vehicle.setMake(request.getMake());
+            vehicle.setModel(request.getModel());
+            vehicle.setGeneration(request.getGeneration());
+            vehicle.setYearFrom(request.getYearFrom());
+            vehicle.setYearTo(request.getYearTo());
+            vehicle.setEngine(request.getEngine());
+
+            Vehicle updated = vehicleService.updateVehicle(id, vehicle);
+            return ResponseEntity.ok(ApiResponse.success("Автомобиль обновлен", updated));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/vehicles/{id}")
+    public ResponseEntity<ApiResponse> deleteVehicle(@PathVariable Long id) {
+        try {
+            vehicleService.deleteVehicle(id);
+            return ResponseEntity.ok(ApiResponse.success("Автомобиль удален", null));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }

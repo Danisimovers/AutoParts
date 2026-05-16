@@ -19,9 +19,10 @@ public class VinRequestRepository {
     private JdbcTemplate jdbcTemplate;
 
     public void save(VinRequest request) {
-        String sql = "INSERT INTO vin_requests (user_id, vin, description, status) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO vin_requests (user_id, user_vehicle_id, vin, description, status) VALUES (?, ?, ?, ?, ?)";
         jdbcTemplate.update(sql,
                 request.getUserId(),
+                request.getUserVehicleId(),
                 request.getVin(),
                 request.getDescription(),
                 request.getStatus() != null ? request.getStatus() : "PENDING"
@@ -33,7 +34,6 @@ public class VinRequestRepository {
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(VinRequest.class));
     }
 
-    // Пагинация для VIN заявок
     public Page<VinRequest> findAll(Pageable pageable) {
         String countSql = "SELECT COUNT(*) FROM vin_requests";
         int total = jdbcTemplate.queryForObject(countSql, Integer.class);
@@ -48,7 +48,6 @@ public class VinRequestRepository {
         return new PageImpl<>(requests, pageable, total);
     }
 
-    // Поиск по VIN или описанию
     public Page<VinRequest> search(String search, Pageable pageable) {
         String searchPattern = "%" + search.toLowerCase() + "%";
 
@@ -66,7 +65,6 @@ public class VinRequestRepository {
         return new PageImpl<>(requests, pageable, total);
     }
 
-    // Фильтр по статусу
     public Page<VinRequest> findByStatus(String status, Pageable pageable) {
         String countSql = "SELECT COUNT(*) FROM vin_requests WHERE status = ?";
         int total = jdbcTemplate.queryForObject(countSql, Integer.class, status);
@@ -82,7 +80,6 @@ public class VinRequestRepository {
         return new PageImpl<>(requests, pageable, total);
     }
 
-    // Поиск с фильтром по статусу
     public Page<VinRequest> searchWithStatus(String search, String status, Pageable pageable) {
         String searchPattern = "%" + search.toLowerCase() + "%";
 
