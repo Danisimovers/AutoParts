@@ -148,7 +148,7 @@ public class AdminController {
     @PutMapping("/stock/{productId}")
     public ResponseEntity<ApiResponse> updateStock(@PathVariable Long productId, @RequestParam int quantity) {
         try {
-            stockService.addStock(productId, quantity, "MAIN");
+            stockService.addStock(productId, quantity, 1L);
             return ResponseEntity.ok(ApiResponse.success("Остатки обновлены", null));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));

@@ -25,7 +25,7 @@ public class StockService {
         return inventory != null ? inventory.getQuantity() : 0;
     }
 
-    public void addStock(Long productId, int quantity, String warehouseId) {
+    public void addStock(Long productId, int quantity, Long warehouseId) {
         if (quantity <= 0) {
             throw new IllegalArgumentException("Количество должно быть больше 0");
         }
@@ -38,7 +38,7 @@ public class StockService {
             Inventory inventory = new Inventory();
             inventory.setProductId(productId);
             inventory.setQuantity(quantity);
-            inventory.setWarehouseId(warehouseId);
+            inventory.setWarehouseId(warehouseId);  // ← ИСПРАВЛЕНО: убрали String.valueOf()
             inventoryRepository.save(inventory);
         }
     }

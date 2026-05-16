@@ -112,7 +112,7 @@ public class ReturnService {
         // Возвращаем товар на склад
         Product product = productService.getProductById(orderItem.getProductId());
         if (product != null) {
-            stockService.addStock(product.getId(), orderItem.getQuantity(), "MAIN");
+            stockService.addStock(product.getId(), orderItem.getQuantity(), 1L);
         }
 
         // Обновляем статус возврата

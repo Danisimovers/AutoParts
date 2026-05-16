@@ -20,7 +20,7 @@ import org.springframework.data.domain.Pageable;
 public class ExternalRequestService {
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;  // Оставляем для сложных запросов к другим таблицам
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private ExternalRequestRepository externalRequestRepository;
@@ -31,20 +31,15 @@ public class ExternalRequestService {
     @Autowired
     private StockService stockService;
 
-    // Теперь используем репозиторий
     public List<ExternalRequest> getAllExternalRequests() {
         return externalRequestRepository.findAll();
     }
 
     @Transactional
     public void updateStatus(Long id, String status) {
-        // Используем репозиторий для получения order_id
         Long orderId = externalRequestRepository.findOrderIdById(id);
-
-        // Используем репозиторий для обновления статуса
         externalRequestRepository.updateStatus(id, status);
 
-        // Синхронизируем статус заказа (это бизнес-логика, остаётся в сервисе)
         if (orderId != null) {
             String orderStatus = null;
             switch (status) {
@@ -64,9 +59,7 @@ public class ExternalRequestService {
             }
         }
 
-        // Уведомление пользователю (бизнес-логика)
         Long userId = externalRequestRepository.findUserIdById(id);
-
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType("EXTERNAL_REQUEST_STATUS");
@@ -98,10 +91,8 @@ public class ExternalRequestService {
         String insertOrderSql = "INSERT INTO purchase_orders (supplier_id, date, status, total) VALUES (?, ?, ?, ?)";
         jdbcTemplate.update(insertOrderSql, supplierId, LocalDate.now(), "ORDERED", request.getPrice());
 
-        // Обновляем статус external_request через репозиторий
         externalRequestRepository.updateStatus(id, "ORDERED");
 
-        // Обновляем статус заказа
         Long orderId = request.getOrderId();
         if (orderId != null) {
             String updateOrderSql = "UPDATE sales_orders SET status = 'PENDING_SUPPLIER' WHERE id = ?";
@@ -120,80 +111,111 @@ public class ExternalRequestService {
 
     @Transactional
     public Map<String, Object> addToStockFromRequest(Long id) {
-        ExternalRequest request = externalRequestRepository.findById(id);
-        if (request == null) {
-            throw new IllegalArgumentException("Запрос не найден");
-        }
-
-        String status = request.getStatus();
-        if (!"ORDERED".equals(status)) {
-            throw new IllegalArgumentException("Товар еще не заказан у поставщика");
-        }
-
-        String factoryNumber = request.getFactoryNumber();
-        String producerName = request.getProducer();
-
-        // Получаем или создаём категорию "Без категории"
-        Long defaultCategoryId;
-        String checkCategorySql = "SELECT id FROM categories WHERE name = 'Без категории'";
         try {
-            defaultCategoryId = jdbcTemplate.queryForObject(checkCategorySql, Long.class);
+            System.out.println("=== НАЧАЛО addToStockFromRequest для id: " + id);
+
+            ExternalRequest request = externalRequestRepository.findById(id);
+            if (request == null) {
+                System.err.println("Запрос не найден с id: " + id);
+                throw new IllegalArgumentException("Запрос не найден");
+            }
+            System.out.println("Найден запрос: " + request.getProductName() + ", статус: " + request.getStatus());
+
+            String status = request.getStatus();
+            if (!"ORDERED".equals(status)) {
+                System.err.println("Неверный статус. Ожидается ORDERED, текущий: " + status);
+                throw new IllegalArgumentException("Товар еще не заказан у поставщика. Текущий статус: " + status);
+            }
+
+            String factoryNumber = request.getFactoryNumber();
+            String producerName = request.getProducer();
+            System.out.println("Артикул: " + factoryNumber + ", Производитель: " + producerName);
+
+            // Получаем или создаём категорию "Без категории"
+            Long defaultCategoryId;
+            String checkCategorySql = "SELECT id FROM categories WHERE name = 'Без категории'";
+            try {
+                defaultCategoryId = jdbcTemplate.queryForObject(checkCategorySql, Long.class);
+                System.out.println("Категория найдена: " + defaultCategoryId);
+            } catch (Exception e) {
+                System.out.println("Категория не найдена, создаём...");
+                String insertCategorySql = "INSERT INTO categories (name) VALUES ('Без категории')";
+                jdbcTemplate.update(insertCategorySql);
+                defaultCategoryId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
+                System.out.println("Категория создана: " + defaultCategoryId);
+            }
+
+            // Получаем или создаём производителя
+            Long manufacturerId;
+            String checkManufacturerSql = "SELECT id FROM manufacturers WHERE name = ?";
+            try {
+                manufacturerId = jdbcTemplate.queryForObject(checkManufacturerSql, Long.class, producerName);
+                System.out.println("Производитель найден: " + manufacturerId);
+            } catch (Exception e) {
+                System.out.println("Производитель не найден, создаём...");
+                String insertManufacturerSql = "INSERT INTO manufacturers (name) VALUES (?)";
+                jdbcTemplate.update(insertManufacturerSql, producerName);
+                manufacturerId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
+                System.out.println("Производитель создан: " + manufacturerId);
+            }
+
+            // Получаем или создаём товар
+            String checkProductSql = "SELECT id FROM products WHERE sku = ?";
+            Long productId;
+            try {
+                productId = jdbcTemplate.queryForObject(checkProductSql, Long.class, factoryNumber);
+                System.out.println("Товар найден: " + productId);
+            } catch (Exception e) {
+                System.out.println("Товар не найден, создаём...");
+                String insertProductSql = "INSERT INTO products (sku, name, description, price, oem_code, category_id, manufacturer_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                jdbcTemplate.update(insertProductSql,
+                        factoryNumber,
+                        request.getProductName(),
+                        "Товар от поставщика: " + request.getProductName(),
+                        request.getPrice(),
+                        factoryNumber,
+                        defaultCategoryId,
+                        manufacturerId);
+                productId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
+                System.out.println("Товар создан: " + productId);
+            }
+
+            // Добавляем на склад (используем 1L как Long)
+            int quantity = 1;
+            System.out.println("Добавляем на склад: productId=" + productId + ", quantity=" + quantity);
+            stockService.addStock(productId, quantity, 1L);  // ← ИСПРАВЛЕНО: 1L вместо 1
+            System.out.println("На склад добавлено");
+
+            // Обновляем статус external_request
+            externalRequestRepository.updateStatus(id, "COMPLETED");
+            System.out.println("Статус external_request обновлён на COMPLETED");
+
+            // Обновляем статус заказа
+            Long orderId = request.getOrderId();
+            if (orderId != null) {
+                String updateOrderSql = "UPDATE sales_orders SET status = 'DELIVERED' WHERE id = ?";
+                jdbcTemplate.update(updateOrderSql, orderId);
+                System.out.println("Статус заказа " + orderId + " обновлён на DELIVERED");
+            }
+
+            Notification notification = new Notification();
+            notification.setUserId(request.getUserId());
+            notification.setType("EXTERNAL_REQUEST_STATUS");
+            notification.setTitle("Товар поступил на склад");
+            notification.setMessage("Запрошенный товар " + request.getProductName() + " теперь доступен для заказа");
+            notification.setLink("/catalog?search=" + factoryNumber);
+            notification.setRead(false);
+            notificationRepository.save(notification);
+            System.out.println("Уведомление отправлено пользователю " + request.getUserId());
+
+            System.out.println("=== УСПЕШНОЕ ЗАВЕРШЕНИЕ ===");
+            return Map.of("productId", productId, "quantity", quantity);
+
         } catch (Exception e) {
-            String insertCategorySql = "INSERT INTO categories (name) VALUES ('Без категории')";
-            jdbcTemplate.update(insertCategorySql);
-            defaultCategoryId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
+            System.err.println("=== ОШИБКА В addToStockFromRequest ===");
+            e.printStackTrace();
+            throw new RuntimeException("Ошибка при добавлении товара на склад: " + e.getMessage(), e);
         }
-
-        // Получаем или создаём производителя
-        Long manufacturerId;
-        String checkManufacturerSql = "SELECT id FROM manufacturers WHERE name = ?";
-        try {
-            manufacturerId = jdbcTemplate.queryForObject(checkManufacturerSql, Long.class, producerName);
-        } catch (Exception e) {
-            String insertManufacturerSql = "INSERT INTO manufacturers (name) VALUES (?)";
-            jdbcTemplate.update(insertManufacturerSql, producerName);
-            manufacturerId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
-        }
-
-        // Получаем или создаём товар
-        String checkProductSql = "SELECT id FROM products WHERE sku = ?";
-        Long productId;
-        try {
-            productId = jdbcTemplate.queryForObject(checkProductSql, Long.class, factoryNumber);
-        } catch (Exception e) {
-            String insertProductSql = "INSERT INTO products (sku, name, price, category_id, manufacturer_id) VALUES (?, ?, ?, ?, ?)";
-            jdbcTemplate.update(insertProductSql,
-                    factoryNumber,
-                    request.getProductName(),
-                    request.getPrice(),
-                    defaultCategoryId,
-                    manufacturerId);
-            productId = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
-        }
-
-        // Добавляем на склад
-        stockService.addStock(productId, 1, "MAIN");
-
-        // Обновляем статус external_request через репозиторий
-        externalRequestRepository.updateStatus(id, "COMPLETED");
-
-        // Обновляем статус заказа на DELIVERED
-        Long orderId = request.getOrderId();
-        if (orderId != null) {
-            String updateOrderSql = "UPDATE sales_orders SET status = 'DELIVERED' WHERE id = ?";
-            jdbcTemplate.update(updateOrderSql, orderId);
-        }
-
-        Notification notification = new Notification();
-        notification.setUserId(request.getUserId());
-        notification.setType("EXTERNAL_REQUEST_STATUS");
-        notification.setTitle("Товар поступил на склад");
-        notification.setMessage("Запрошенный товар " + request.getProductName() + " теперь доступен для заказа");
-        notification.setLink("/catalog?search=" + factoryNumber);
-        notification.setRead(false);
-        notificationRepository.save(notification);
-
-        return Map.of("productId", productId);
     }
 
     // Пагинация для запросов

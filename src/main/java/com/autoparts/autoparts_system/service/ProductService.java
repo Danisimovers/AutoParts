@@ -31,7 +31,6 @@ public class ProductService {
         return productRepository.searchWithPagination(search, pageable);
     }
 
-    // Сервис только вызывает метод репозитория, без SQL логики
     public Page<Product> searchWithFilters(String search, Long categoryId, Long manufacturerId, Long vehicleId, Pageable pageable) {
         return productRepository.searchWithFilters(search, categoryId, manufacturerId, vehicleId, pageable);
     }
@@ -60,7 +59,7 @@ public class ProductService {
         Inventory inventory = new Inventory();
         inventory.setProductId(product.getId());
         inventory.setQuantity(0);
-        inventory.setWarehouseId("MAIN");
+        inventory.setWarehouseId(1L);  // ← ИСПРАВЛЕНО: ID основного склада = 1
         inventoryRepository.save(inventory);
         return product;
     }
