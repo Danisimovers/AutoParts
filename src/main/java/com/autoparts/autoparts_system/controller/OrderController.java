@@ -37,9 +37,8 @@ public class OrderController {
     private UserService userService;
 
     @Autowired
-    private JwtService jwtService;  // ← добавляем
+    private JwtService jwtService;
 
-    // получаем userId из токена
     private Long getCurrentUserId(HttpServletRequest request) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
@@ -61,7 +60,6 @@ public class OrderController {
         throw new RuntimeException("Не удалось определить ID пользователя");
     }
 
-    // ИСПРАВЛЕННЫЙ метод createOrder
     @PostMapping
     public ResponseEntity<ApiResponse> createOrder(HttpServletRequest httpRequest) {
         try {

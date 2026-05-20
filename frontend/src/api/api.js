@@ -25,8 +25,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Обработка 401/403 - перенаправление на логин
-        if (error.response?.status === 401 || error.response?.status === 403) {
+        // Проверяем, является ли запрос попыткой входа
+        const isLoginRequest = error.config?.url?.includes('/auth/login');
+        const isPasswordCheck = error.config?.url?.includes('/auth/verify-password');
+
+        // Обработка 401/403 - перенаправление на логин (кроме запросов входа)
+        if ((error.response?.status === 401 || error.response?.status === 403) && !isLoginRequest && !isPasswordCheck) {
             localStorage.removeItem('token');
             window.location.href = '/login';
         }

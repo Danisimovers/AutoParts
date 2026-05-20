@@ -16,5 +16,5 @@ public class Product {
     private BigDecimal price;
     private Long categoryId;
     private Long manufacturerId;
-    private String oemCode; // OEM код для поиска
+    private String oemCode;
 }

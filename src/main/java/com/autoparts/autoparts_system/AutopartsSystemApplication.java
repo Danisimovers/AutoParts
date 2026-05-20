@@ -1,5 +1,7 @@
 package com.autoparts.autoparts_system;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -9,7 +11,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class AutopartsSystemApplication {
 
+	private static final Logger log = LogManager.getLogger(AutopartsSystemApplication.class);
+
+	AutopartsSystemApplication() {
+		log.debug("AutopartsSystemApplication: starting application...");
+	}
+
 	public static void main(String[] args) {
+
 		SpringApplication.run(AutopartsSystemApplication.class, args);
 	}
 

@@ -92,8 +92,7 @@ function Footer() {
                         <h3 className="text-white font-semibold mb-4">График работы</h3>
                         <ul className="space-y-2 text-sm">
                             <li className="flex justify-between">
-                                <span className="text-gray-400">Ежедневно:</span>
-                                <span className="text-white">09:00 - 23:00</span>
+                                <span className="text-gray-400">Ежедневно: 09:00 - 23:00</span>
                             </li>
                             <li className="flex justify-between">
                                 <span className="text-gray-400">Без выходных</span>

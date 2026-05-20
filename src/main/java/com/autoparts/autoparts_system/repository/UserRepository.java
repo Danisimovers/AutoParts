@@ -23,7 +23,7 @@ public class UserRepository {
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(User.class));
     }
 
-    // НОВЫЙ МЕТОД: Пагинация для пользователей
+    // Пагинация для пользователей
     public Page<User> findAll(Pageable pageable) {
         String countSql = "SELECT COUNT(*) FROM users";
         int total = jdbcTemplate.queryForObject(countSql, Integer.class);
@@ -38,7 +38,7 @@ public class UserRepository {
         return new PageImpl<>(users, pageable, total);
     }
 
-    // НОВЫЙ МЕТОД: Поиск пользователей с пагинацией
+    // Поиск пользователей с пагинацией
     public Page<User> search(String search, Pageable pageable) {
         String searchPattern = "%" + search.toLowerCase() + "%";
 
@@ -56,7 +56,7 @@ public class UserRepository {
         return new PageImpl<>(users, pageable, total);
     }
 
-    // НОВЫЙ МЕТОД: Подсчет всех пользователей
+    // Подсчет всех пользователей
     public long count() {
         String sql = "SELECT COUNT(*) FROM users";
         return jdbcTemplate.queryForObject(sql, Long.class);

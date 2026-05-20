@@ -17,6 +17,12 @@ function Profile() {
     const [deleteError, setDeleteError] = useState('');
     const [deleting, setDeleting] = useState(false);
 
+    // Состояния для модального окна подтверждения пароля
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [verifying, setVerifying] = useState(false);
+
     useEffect(() => {
         if (user) {
             loadUserData();
@@ -65,8 +71,47 @@ function Profile() {
         }
     };
 
+    // Проверка текущего пароля перед сменой
+    const handleVerifyPassword = async (e) => {
+        e.preventDefault();
+        setPasswordError('');
+
+        if (!currentPassword.trim()) {
+            setPasswordError('Введите текущий пароль');
+            return;
+        }
+
+        setVerifying(true);
+
+        try {
+            const response = await api.post('/auth/login', {
+                login: user.login,
+                password: currentPassword
+            });
+
+            if (response.data.success) {
+                setShowPasswordModal(false);
+                setCurrentPassword('');
+                navigate('/forgot-password');
+            } else {
+                setPasswordError('Неверный пароль');
+            }
+        } catch (error) {
+            if (error.response?.status === 401) {
+                setPasswordError('Неверный пароль');
+            } else {
+                setPasswordError('Ошибка проверки пароля. Попробуйте позже.');
+            }
+        } finally {
+            setVerifying(false);
+        }
+    };
+
     const handleChangePassword = () => {
-        navigate('/forgot-password');
+        // Открываем модальное окно для ввода текущего пароля
+        setShowPasswordModal(true);
+        setCurrentPassword('');
+        setPasswordError('');
     };
 
     const handleDeleteAccount = async () => {
@@ -79,7 +124,6 @@ function Profile() {
         setDeleteError('');
 
         try {
-            // Сначала проверяем пароль через логин
             const loginResponse = await api.post('/auth/login', {
                 login: user.login,
                 password: deletePassword
@@ -88,20 +132,18 @@ function Profile() {
             if (!loginResponse.data.success) {
                 setDeleteError('Неверный пароль');
                 setDeleting(false);
-                return;  // <-- НЕ ЗАКРЫВАЕМ ОКНО, просто показываем ошибку
+                return;
             }
 
-            // Удаляем аккаунт
             await api.delete('/users/me');
             alert('Аккаунт успешно удален');
-            setShowDeleteModal(false);  // <-- ЗАКРЫВАЕМ ТОЛЬКО ПРИ УСПЕХЕ
+            setShowDeleteModal(false);
             setDeletePassword('');
             logout();
             navigate('/');
         } catch (error) {
             setDeleteError(error.response?.data?.message || 'Ошибка при удалении аккаунта');
             setDeleting(false);
-            // Окно не закрываем
         }
     };
 
@@ -245,7 +287,7 @@ function Profile() {
             <div className="mt-6 bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">Безопасность</h3>
                 <p className="text-gray-500 text-sm mb-4">
-                    Хотите изменить пароль? Вы можете запросить сброс пароля на вашу электронную почту.
+                    Хотите изменить пароль? Сначала подтвердите текущий пароль.
                 </p>
                 <button
                     onClick={handleChangePassword}
@@ -269,6 +311,56 @@ function Profile() {
                     Удалить аккаунт
                 </button>
             </div>
+
+            {/* Модальное окно подтверждения пароля для смены */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Подтверждение пароля</h3>
+                        <p className="text-gray-600 mb-4">
+                            Для смены пароля подтвердите ваш текущий пароль.
+                        </p>
+                        <form onSubmit={handleVerifyPassword}>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 font-medium mb-1">Текущий пароль</label>
+                                <input
+                                    type="password"
+                                    value={currentPassword}
+                                    onChange={(e) => setCurrentPassword(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                    placeholder="Введите текущий пароль"
+                                    autoFocus
+                                />
+                            </div>
+                            {passwordError && (
+                                <div className="bg-red-50 text-red-600 p-2 rounded-lg mb-4 text-sm">
+                                    {passwordError}
+                                </div>
+                            )}
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowPasswordModal(false);
+                                        setCurrentPassword('');
+                                        setPasswordError('');
+                                    }}
+                                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition"
+                                >
+                                    Отмена
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={verifying}
+                                    className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-600 transition disabled:opacity-50"
+                                >
+                                    {verifying ? 'Проверка...' : 'Подтвердить'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Модальное окно подтверждения удаления */}
             {showDeleteModal && (
